@@ -15,6 +15,8 @@ export interface Store {
   addToList(habitId: string, kind: HabitKind): Promise<void>
   removeFromList(habitId: string): Promise<void>
   activeHabits(): Promise<ActiveHabitRow[]>
+  // Presets plus custom habits.
+  habits(): Promise<Habit[]>
   // Returns the new id: 'custom-' + a slug of the name.
   saveCustomHabit(habit: Omit<Habit, 'id'>): Promise<string>
 }
@@ -98,6 +100,8 @@ export function createStore(db: HabitDB, today: () => string): Store {
     },
 
     activeHabits: () => db.activeHabits.toArray(),
+
+    habits: async () => [...HABITS, ...(await db.customHabits.toArray())],
 
     saveCustomHabit: async ({ name, category, weights }) => {
       const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')

@@ -197,6 +197,15 @@ describe('active habit list', () => {
   })
 })
 
+describe('habits', () => {
+  it('lists presets and custom habits together', async () => {
+    const id = await store.saveCustomHabit({ name: 'Meditation', category: 'study', weights: { intelligence: 100 } })
+    const habits = await store.habits()
+    expect(habits.find((h) => h.id === 'boxing')?.name).toBe('Boxing')
+    expect(habits.find((h) => h.id === id)?.name).toBe('Meditation')
+  })
+})
+
 describe('custom habits', () => {
   const meditation = {
     name: 'Meditation',

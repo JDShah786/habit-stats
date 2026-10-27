@@ -5,7 +5,7 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 - [x] 1. Scoring engine (rules 1–8 + corrections) + tests — PR #1, merged 2026-10-27
 - [x] 2. Habit library file + validation tests — PR #4, merged 2026-10-27
 - [x] 3. Storage layer (Dexie) — PR #6, merged 2026-10-27
-- [ ] 4. Screens: Today → Stats → Library → My habits
+- [ ] 4. Screens: Today → Library → Stats → My habits
 - [ ] 5. Rank-up and graduation animations
 - [ ] 6. Settings export/import
 - [ ] 7. PWA install + offline, then first deploy
@@ -40,3 +40,12 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-10-27 | 3 | "Remove" only hides a habit from the list. Its sessions, points and (for custom habits) definition stay. A habit's history is never wiped. | Earned time stays earned; replays always know every habit's weights. | → in SPEC |
 | 2026-10-27 | 3 | Re-adding a habit sets addedOn to the latest add. | Hamid's call. | → in SPEC |
 | 2026-10-27 | 3 | Custom habit ids are 'custom-' + a slug of the name. Presets may never start with 'custom-'. Two custom habits can't share a name. | The library will keep growing; no future preset can clash with a custom id. | → in SPEC |
+| 2026-10-27 | 4 | Look: bold, Persona-inspired (dark, one red accent, angled panels), all original shapes. Headings use Anton (self-hosted via @fontsource/anton, OFL); body uses the iPhone system font. | Hamid's call; the font works offline. | No |
+| 2026-10-27 | 4 | Navigation: bottom tab bar (Today, Stats, Library, My habits). Settings will be a gear on My habits. | Standard iPhone pattern; no router library. | No |
+| 2026-10-27 | 4 | Screen tests use jsdom + React Testing Library + user-event (dev-only). | Screens tested in CI like everything else. | No |
+| 2026-10-27 | 4 | One PR per screen: 4a Today + app shell, 4b Stats, 4c Library, 4d My habits. | Smaller reviews. | No |
+| 2026-10-27 | 4 | Logging: tap a habit to open a sheet with a minutes box, quick buttons (5/10/15/30/60), and today's sessions with edit/delete. | Hamid's call. | No |
+| 2026-10-27 | 4 | A daily habit is ticked by any session today. No targets. | Matches no streaks / no missed marker. | No |
+| 2026-10-27 | 4 | Until step 5, rank-ups and graduation show as a plain banner (tap to dismiss). Rank-downs stay silent. | Events visible right away; step 5 replaces it. | No |
+| 2026-10-27 | 4 | Build order changes to Today → Library → Stats → My habits. | The app is usable on the phone (add habits, log) one PR sooner. | No |
+| 2026-10-27 | 0 | Remote checking: main deploys to GitHub Pages; every PR gets its own preview link with its own database (VITE_DB_NAME), so previews never touch real data. Claude screenshots previews and sends them to Hamid. Deploy moves forward from step 7; PWA install/offline stays in step 7. | Hamid can review by phone from anywhere. | No |
