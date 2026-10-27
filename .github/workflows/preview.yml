@@ -1,0 +1,36 @@
+# Gives every PR its own preview at /habit-stats/pr-preview/pr-<number>/ and comments the link.
+# Each preview uses its own database name, so it never touches real habit data.
+name: PR preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        if: github.event.action != 'closed'
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        if: github.event.action != 'closed'
+      - run: npm run build
+        if: github.event.action != 'closed'
+        env:
+          VITE_DB_NAME: habit-stats-pr-${{ github.event.number }}
+      # Deploys on open/update, removes the preview when the PR closes.
+      - uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: dist
