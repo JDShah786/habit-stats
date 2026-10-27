@@ -28,7 +28,7 @@ Every piece is free and runs on Windows. The rule behind each pick: popular, wel
 | Tests | Vitest + React Testing Library | Runs our tests-first suite | Built for Vite; tests logic and screens |
 | Code home | GitHub | Stores code + history | Free, needed for hosting |
 | Hosting | GitHub Pages | Serves the app at a public URL | Free, HTTPS (required for PWAs) |
-| Auto-deploy | GitHub Actions | Runs tests, then deploys on every push | Free; a failing test blocks a bad deploy |
+| CI + auto-deploy | GitHub Actions | Runs lint, tests and a type-checked build on every PR; deploys from main (step 7) | Free; a failing check blocks a bad merge or deploy |
 
 ## Architecture
 
@@ -136,7 +136,7 @@ Target: 100+ timed presets across 6 categories, ~17 each. Claude drafts each hab
 | Reading | Intelligence |
 | Art | Proficiency + Charm |
 
-A habit can override its category default. Library tests: every habit has a unique id, a known category, and whole-number weights summing to 100.
+A habit can override its category default. Library tests: every habit has a unique id, a unique name, a known category, and weights that are multiples of 10 from 10 to 100, summing to 100. A stat a habit doesn't feed is left out, not set to 0. Ids are readable lowercase slugs (e.g. `boxing`, `hiit-20s`) and never change once released, because sessions store them.
 
 ## Screens
 
@@ -155,7 +155,7 @@ A habit can override its category default. Library tests: every habit has a uniq
 
 1. **Plan** — together: requirements locked by grilling, written into this spec.
 2. **Build** — Claude, tests first: write tests from the spec, show they fail, then write code until they pass. Each step explained.
-3. **Review** — Hamid first, then Claude re-reviews against the spec.
+3. **Review** — each step is a pull request that CI checks. Hamid reviews first, then Claude re-reviews against the spec and merges.
 4. **Deploy** — push to GitHub; Actions runs every test and only publishes to GitHub Pages if all pass.
 
 Build order:
