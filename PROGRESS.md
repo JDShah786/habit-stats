@@ -13,6 +13,7 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 ## Notes for later steps
 
 - Step 3: storage must enforce "today only" for log/edit/delete. The engine scores whatever sessions it's given.
+- Library goal (Hamid): ship the most common habits in the world, so custom habits are rarely needed. Grow habits.json over time.
 
 ## Decisions log
 
@@ -32,3 +33,9 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-10-27 | 2 | Preset weights are multiples of 10, from 10 to 100. A stat a habit doesn't feed is left out, not set to 0. | Easy to read and compare across 100+ habits. | → in SPEC |
 | 2026-10-27 | 2 | Habit ids are readable lowercase slugs (e.g. "boxing", "hiit-20s") and never change once released. | Sessions store the id; slugs stay readable in exports and tests. | → in SPEC |
 | 2026-10-27 | 2 | Habits are reviewed as a per-category table in the PR description. | ~100 entries are easier to review as a table than as JSON. | Process only, not SPEC |
+| 2026-10-27 | 3 | No StatTotal table: totals are the sum of Award rows. This morning's totals = awards dated before today. | Totals can never drift from awards; summing ~7,000 rows/year is instant. | No |
+| 2026-10-27 | 3 | fake-indexeddb (dev-only) runs storage tests in Node and CI. | Storage rules get automated tests; never shipped to the phone. | No |
+| 2026-10-27 | 3 | "Today" is checked at the moment of each action. After midnight, yesterday's sessions are locked; no grace period. | Matches the today-only rule exactly. | No |
+| 2026-10-27 | 3 | "Remove" only hides a habit from the list. Its sessions, points and (for custom habits) definition stay. A habit's history is never wiped. | Earned time stays earned; replays always know every habit's weights. | No |
+| 2026-10-27 | 3 | Re-adding a habit sets addedOn to the latest add. | Hamid's call. | No |
+| 2026-10-27 | 3 | Custom habit ids are 'custom-' + a slug of the name. Presets may never start with 'custom-'. Two custom habits can't share a name. | The library will keep growing; no future preset can clash with a custom id. | No |

@@ -29,6 +29,7 @@ export function validateLibrary(habits: readonly Habit[]): string[] {
     const problem = (message: string) => errors.push(`habit "${id}": ${message}`)
 
     if (!SLUG.test(id)) problem('id must be a lowercase slug like "hiit-20s"')
+    if (id.startsWith('custom-')) problem('id must not start with "custom-" (reserved for custom habits)')
     if (ids.has(id)) problem('duplicate id')
     ids.add(id)
 

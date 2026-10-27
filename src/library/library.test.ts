@@ -35,6 +35,10 @@ describe('validateLibrary', () => {
       },
     )
 
+    it('rejects a preset id starting with custom- (reserved for custom habits)', () => {
+      expectOneError([habit({ id: 'custom-boxing' })], /custom-/)
+    })
+
     it('accepts slugs with digits and single hyphens', () => {
       expect(validateLibrary([habit({ id: 'hiit-20s' })])).toEqual([])
     })
