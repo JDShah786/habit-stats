@@ -5,7 +5,7 @@ Originally drafted in: https://claude.ai/artifact/BfwNeF2ticBYJUzXVYq6pU (histor
 
 ## Overview
 
-A free iPhone habit tracker that turns time spent on habits into Persona-style social stats. You log timed habits; each habit feeds one or more of four stats (Charm, Courage, Intelligence, Proficiency); stats rank up from 1 to 5 over roughly 6–12 months. At Rank 5 a stat is "graduated": the app congratulates you and stops counting it, because by then the habit is part of you.
+A free iPhone habit tracker that turns time spent on habits into Persona-style social stats. You log timed habits; each habit feeds one or more of four stats (Charm, Courage, Intelligence, Proficiency); stats rank up from 1 to 5 over roughly 6–12 months. At Rank 5 (1000 points) a stat is maxed and stops counting. When all four stats are maxed you "graduate": the app congratulates you, because by then the habits are part of you.
 
 - **Cost:** $0 to build, host and use
 - **Device:** iPhone, installed from Safari to the Home Screen (PWA)
@@ -18,7 +18,8 @@ Every piece is free and runs on Windows. The rule behind each pick: popular, wel
 
 | Layer | Tool | What it does | Why this one |
 | --- | --- | --- | --- |
-| Language | TypeScript | JavaScript with types | Catches bugs before running, like Kotlin/Java types you already know |
+| Language | TypeScript 7 | JavaScript with types | Catches bugs before running, like Kotlin/Java types you already know |
+| Lint | oxlint | Flags common mistakes in code | Vite's default, fast, near-zero config |
 | UI | React | Builds screens from components | Most used UI library; same skills port to React Native/Expo |
 | Build tool | Vite | Runs a dev server, bundles the app | Fast, simple config, standard for new React apps |
 | Installable app | vite-plugin-pwa | Adds the manifest + service worker | Makes it installable on iPhone and work offline |
@@ -77,18 +78,18 @@ Pace check: ~3 pts/day into a stat reaches 1000 in ~11 months; ~5.5 pts/day in ~
 
 Each rule below becomes one or more tests before any code is written.
 
-1. **Timed only.** Every habit takes time. A session is logged as whole minutes (1 or more), typed in. A timer may come later.
+1. **Timed only.** Every habit takes time. A session is logged as whole minutes (1 or more), typed in; anything else is rejected. A day's sessions across all habits can't add up to more than 1440 minutes (24 hours). A timer may come later.
 2. **A day** runs midnight to midnight, phone's local time.
 3. **Daily points per habit** = 2 base points (once, on the first session that day) + 1 point per full 10 minutes of that day's total time for the habit. Sessions add up: 5 min + 5 min = 10 min = +1. No cap.
 4. **Split by weight.** Each habit has integer weights per stat that sum to 100 (e.g. Courage 70, Charm 30). Each stat's share = daily points × weight, **rounded up** to a whole number. No fractions are ever stored.
 5. **Recalculate, then pay the difference.** After each session, the app recomputes that habit's shares for the day and awards only what's new. Split sessions score the same as one long one, and rounding up happens once per day, not once per session.
 6. **Redirect from maxed stats.** If a stat the habit feeds is already at 1000, its weight moves to the habit's other un-maxed stats, in proportion to their weights. If all its stats are maxed, the habit earns nothing but can still be logged.
-7. **Max = 1000, then stop.** A stat never goes above 1000. Points past 1000 redirect to the habit's other un-maxed stats; if none are left, they are dropped. Hitting 1000 triggers the graduation animation; the stat stops counting.
-8. **Rank-ups** trigger the rank-up animation the moment a threshold (60 / 200 / 500 / 1000) is crossed.
+7. **Max = 1000, then stop.** A stat never goes above 1000. Points past 1000 redirect to the habit's other un-maxed stats in proportion to their weights, each part rounded up; if none are left, they are dropped. Redirected points count as paid for rule 5. A stat at 1000 shows as Max and stops counting. When all four stats reach 1000, the graduation animation plays.
+8. **Rank-ups** trigger the rank-up animation the moment a threshold (60 / 200 / 500 / 1000) is crossed. If one session ever crosses two thresholds, one animation shows old → new.
 
 **Corrections and timing:**
 
-- **Edit or delete** a session to fix mistakes. The app recomputes that habit's day and takes back or adds the difference. Ranks and Graduated status can go back down, since deleted time doesn't count.
+- **Edit or delete** a session to fix mistakes. The app replays today's remaining sessions, in logged order, from the morning's totals, so the day ends exactly as if the deleted time was never logged. Ranks and Graduated status can go back down, since deleted time doesn't count. A rank going down updates silently, with no animation.
 - **Today only:** sessions can only be logged, edited or deleted for today.
 
 **Worked example — boxing, Courage 70 / Charm 30:**
@@ -118,7 +119,7 @@ Two kinds of data: the **library** ships inside the app as a read-only file; **y
 | ActiveHabit | IndexedDB | habitId, addedOn, kind (daily or anytime) | Which habits are on your list, and how they show |
 | Session | IndexedDB | id, habitId, date, minutes | Every time block you log — the raw truth |
 | Award | IndexedDB | habitId, date, stat, points | What each habit has paid each stat that day (rule 5 diffs against this) |
-| StatTotal | IndexedDB | stat, points, graduated | Running total per stat; rank and title are calculated from points, never stored |
+| StatTotal | IndexedDB | stat, points | Running total per stat; rank, title, Max and Graduated are calculated from points, never stored |
 
 Why ranks aren't stored: a value you can calculate from points can never disagree with points.
 
@@ -142,12 +143,12 @@ A habit can override its category default. Library tests: every habit has a uniq
 | Screen | What it shows | Actions |
 | --- | --- | --- |
 | Today | Daily checklist habits + anytime habits, minutes logged today per habit | Log, edit or delete today's sessions |
-| Stats | 4 stats: rank, title, progress bar to next rank | View only |
+| Stats | 4 stats: rank, title, progress bar to next rank (Max at 1000) | View only |
 | Library | 100+ presets by category, search | Add to your list (daily or anytime) |
 | My habits | Your active + custom habits | Add custom habit, set weights, remove |
 
 - **Rank-up moment:** full-screen, stat name, old → new rank and title, tap to dismiss. Original look inspired by Persona; no Persona art, fonts or sounds.
-- **Graduation moment:** at 1000, an animated "good job" message for that stat; it then shows as Graduated.
+- **Graduation moment:** when all four stats reach 1000, an animated "good job" message; the app then shows as Graduated. A single stat at 1000 gets the normal rank-up to Rank 5 and shows Max.
 - **Settings:** export all data to a file and import it back (free backup).
 
 ## Workflow
@@ -175,6 +176,7 @@ Accounts, cloud sync, App Store, reminders/notifications, streaks, history/calen
 
 - **Audience:** just Hamid for v1; friends next, maybe public later. Sharing = sending the link; each person's data stays on their own phone.
 - **Overflow at max:** redirected to the habit's other stats; dropped if those are maxed too.
+- **Graduation:** all four stats at 1000, not one stat at a time.
 - **Mistakes:** today's sessions can be edited or deleted; ranks and Graduated can go back down.
 - **Back-dating:** no, today only.
 - **Daily vs anytime:** no missed marker.
