@@ -189,6 +189,18 @@ describe('rank banner (placeholder until step 5)', () => {
     expect(screen.queryByRole('status')).toBeNull()
   })
 
+  it('stays up after a later log with no rank-up, until dismissed', async () => {
+    await seed('courage', 58)
+    await store.addToList('boxing', 'daily')
+    const user = renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await logInSheet(user, sheet, '25')
+    await screen.findByRole('status')
+    await logInSheet(user, sheet, '20')
+    await within(sheet).findByText('20 min')
+    expect(screen.getByRole('status').textContent).toMatch(/courage rank up/i)
+  })
+
   it('shows graduation when the last stat reaches 1000', async () => {
     await seed('charm', 1000)
     await seed('courage', 1000)

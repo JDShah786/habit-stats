@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { RankEvent } from '../engine/stats'
 import type { Store } from '../storage/store'
+import { hasAnnouncement } from './announce'
 import { RankBanner } from './RankBanner'
 import { Today } from './Today'
 
@@ -12,12 +13,16 @@ type Screen = (typeof SCREENS)[number]
 export function App({ store }: { store: Store }) {
   const [screen, setScreen] = useState<Screen>('Today')
   const [events, setEvents] = useState<RankEvent[]>([])
+  // A banner stays until dismissed; only a new announcement replaces it.
+  const announce = (next: RankEvent[]) => {
+    if (hasAnnouncement(next)) setEvents(next)
+  }
 
   return (
     <div className="app">
       <main className="screen">
         {screen === 'Today' ? (
-          <Today store={store} onEvents={setEvents} onGoToLibrary={() => setScreen('Library')} />
+          <Today store={store} onEvents={announce}onGoToLibrary={() => setScreen('Library')} />
         ) : (
           <ComingSoon title={screen} />
         )}
