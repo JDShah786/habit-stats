@@ -25,7 +25,7 @@ Every piece is free and runs on Windows. The rule behind each pick: popular, wel
 | Installable app | vite-plugin-pwa | Adds the manifest + service worker | Makes it installable on iPhone and work offline |
 | Storage | IndexedDB via Dexie.js | Database inside the browser on the phone | Sturdier and bigger than localStorage; Dexie makes it easy to query |
 | Animation | Motion (Framer Motion) | Rank-up and graduation animations | Simple API for Persona-style screen effects |
-| Tests | Vitest + React Testing Library | Runs our tests-first suite | Built for Vite; tests logic and screens |
+| Tests | Vitest + React Testing Library + fake-indexeddb | Runs our tests-first suite | Built for Vite; tests logic and screens; fake-indexeddb (dev-only) runs storage tests in Node and CI |
 | Code home | GitHub | Stores code + history | Free, needed for hosting |
 | Hosting | GitHub Pages | Serves the app at a public URL | Free, HTTPS (required for PWAs) |
 | CI + auto-deploy | GitHub Actions | Runs lint, tests and a type-checked build on every PR; deploys from main (step 7) | Free; a failing check blocks a bad merge or deploy |
@@ -51,7 +51,7 @@ ON THE iPHONE (PWA)                         BUILD AND DEPLOY (free)
 | Habit library | | Storage (Dexie)|        +-----------+------------+
 | habits.json   | | IndexedDB:     |                    | only if all pass
 | read-only     | | sessions,      |        +-----------v------------+
-| 100+ presets  | | awards, totals |        | GitHub Pages (HTTPS)   |
+| 100+ presets  | | awards, lists  |        | GitHub Pages (HTTPS)   |
 +---------------+ +----------------+        +-----------+------------+
 +--------------------------------+                      |
 | Service worker: offline cache  |<---------------------+ installs/updates
@@ -90,7 +90,7 @@ Each rule below becomes one or more tests before any code is written.
 **Corrections and timing:**
 
 - **Edit or delete** a session to fix mistakes. The app replays today's remaining sessions, in logged order, from the morning's totals, so the day ends exactly as if the deleted time was never logged. Ranks and Graduated status can go back down, since deleted time doesn't count. A rank going down updates silently, with no animation.
-- **Today only:** sessions can only be logged, edited or deleted for today.
+- **Today only:** sessions can only be logged, edited or deleted for today. "Today" is checked at the moment of each action, so after midnight yesterday's sessions are locked.
 
 **Worked example — boxing, Courage 70 / Charm 30:**
 
@@ -115,13 +115,14 @@ Two kinds of data: the **library** ships inside the app as a read-only file; **y
 | Table | Where | Fields | Purpose |
 | --- | --- | --- | --- |
 | Habit (preset) | `habits.json` in the app | id, name, category, weights {stat: %} | The 100+ library; editing it needs no code change |
-| Habit (custom) | IndexedDB | same as preset + `custom: true` | Habits you add; weights default to equal |
-| ActiveHabit | IndexedDB | habitId, addedOn, kind (daily or anytime) | Which habits are on your list, and how they show |
-| Session | IndexedDB | id, habitId, date, minutes | Every time block you log — the raw truth |
+| Habit (custom) | IndexedDB | same as preset + `custom: true`; id is `custom-` + a slug of the name | Habits you add; weights default to equal; names are unique; never deleted, so history always has their weights |
+| ActiveHabit | IndexedDB | habitId, addedOn, kind (daily or anytime) | Which habits are on your list, and how they show. Re-adding sets addedOn to the latest add. Removing only hides the habit; its history stays |
+| Session | IndexedDB | id (auto-numbered = logged order), habitId, date (YYYY-MM-DD, phone-local), minutes | Every time block you log — the raw truth |
 | Award | IndexedDB | habitId, date, stat, points | What each habit has paid each stat that day (rule 5 diffs against this) |
-| StatTotal | IndexedDB | stat, points | Running total per stat; rank, title, Max and Graduated are calculated from points, never stored |
 
-Why ranks aren't stored: a value you can calculate from points can never disagree with points.
+Totals are not stored: a stat's total is the sum of its Award rows, and this morning's totals are the awards dated before today. Rank, title, Max and Graduated are calculated from totals.
+
+Why totals and ranks aren't stored: a value you can calculate can never disagree with what it's calculated from.
 
 ## Habit library
 
@@ -136,7 +137,7 @@ Target: 100+ timed presets across 6 categories, ~17 each. Claude drafts each hab
 | Reading | Intelligence |
 | Art | Proficiency + Charm |
 
-A habit can override its category default. Library tests: every habit has a unique id, a unique name, a known category, and weights that are multiples of 10 from 10 to 100, summing to 100. A stat a habit doesn't feed is left out, not set to 0. Ids are readable lowercase slugs (e.g. `boxing`, `hiit-20s`) and never change once released, because sessions store them.
+A habit can override its category default. Library tests: every habit has a unique id, a unique name, a known category, and weights that are multiples of 10 from 10 to 100, summing to 100. A stat a habit doesn't feed is left out, not set to 0. Ids are readable lowercase slugs (e.g. `boxing`, `hiit-20s`) and never change once released, because sessions store them. Preset ids never start with `custom-`, which is reserved for custom habits.
 
 ## Screens
 
@@ -145,7 +146,7 @@ A habit can override its category default. Library tests: every habit has a uniq
 | Today | Daily checklist habits + anytime habits, minutes logged today per habit | Log, edit or delete today's sessions |
 | Stats | 4 stats: rank, title, progress bar to next rank (Max at 1000) | View only |
 | Library | 100+ presets by category, search | Add to your list (daily or anytime) |
-| My habits | Your active + custom habits | Add custom habit, set weights, remove |
+| My habits | Your active + custom habits | Add custom habit, set weights, remove from list (history stays) |
 
 - **Rank-up moment:** full-screen, stat name, old → new rank and title, tap to dismiss. Original look inspired by Persona; no Persona art, fonts or sounds.
 - **Graduation moment:** when all four stats reach 1000, an animated "good job" message; the app then shows as Graduated. A single stat at 1000 gets the normal rank-up to Rank 5 and shows Max.
@@ -179,5 +180,6 @@ Accounts, cloud sync, App Store, reminders/notifications, streaks, history/calen
 - **Graduation:** all four stats at 1000, not one stat at a time.
 - **Mistakes:** today's sessions can be edited or deleted; ranks and Graduated can go back down.
 - **Back-dating:** no, today only.
+- **Removing a habit:** hides it from your list; its sessions and points are never wiped.
 - **Daily vs anytime:** no missed marker.
 - **Backup:** export/import in v1.
