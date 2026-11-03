@@ -376,6 +376,144 @@ describe("menu: today's list card", () => {
   })
 })
 
+describe('Library', () => {
+  const renderLibrary = async () => {
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'Library' }))
+    await screen.findByRole('list', { name: 'Habits' })
+    return user
+  }
+  const chips = () => within(screen.getByRole('group', { name: 'Categories' }))
+  const chip = (name: string) => chips().getByRole('button', { name })
+  const pressed = () =>
+    chips()
+      .getAllByRole('button')
+      .filter((b) => b.getAttribute('aria-pressed') === 'true')
+      .map((b) => b.textContent)
+  const libRows = () => within(screen.getByRole('list', { name: 'Habits' })).queryAllByRole('listitem')
+  const libNames = () => libRows().map((li) => li.querySelector('.name')!.textContent)
+  const libRow = (name: string) => libRows().find((li) => li.querySelector('.name')!.textContent === name)!
+  const search = () => screen.getByRole('searchbox', { name: 'Search habits' })
+  const choiceOpen = () => screen.queryByRole('button', { name: 'Daily' }) !== null
+
+  it('opens on Fitness, with its presets sorted by name', async () => {
+    await renderLibrary()
+    expect(pressed()).toEqual(['Fitness'])
+    expect(libNames()).toHaveLength(17)
+    expect(libNames().slice(0, 3)).toEqual(['Basketball', 'Boxing', 'Calisthenics'])
+  })
+
+  it("shows each habit's stats, biggest weight first, without numbers", async () => {
+    await renderLibrary()
+    expect(libRow('Boxing').textContent).toMatch(/Courage · Charm/)
+    expect(libRow('Yoga').textContent).toMatch(/Proficiency · Courage/)
+    expect(libRow('Boxing').textContent).not.toMatch(/\d/)
+  })
+
+  it('a category chip shows that category', async () => {
+    const user = await renderLibrary()
+    await user.click(chip('Study'))
+    expect(pressed()).toEqual(['Study'])
+    expect(libNames()).toContain('Math practice')
+    expect(libNames()).not.toContain('Boxing')
+  })
+
+  it('search matches names in every category and turns the chip off; clearing brings it back', async () => {
+    const user = await renderLibrary()
+    await user.click(chip('Study'))
+    await user.type(search(), 'PRACTICE')
+    expect(pressed()).toEqual([])
+    expect(libNames()).toEqual(expect.arrayContaining(['Guitar practice', 'Math practice', 'Conversation practice']))
+    expect(libNames()).not.toContain('Chess')
+    await user.clear(search())
+    expect(pressed()).toEqual(['Study'])
+    expect(libNames()).toContain('Chess')
+  })
+
+  it('says so when a search matches nothing', async () => {
+    const user = await renderLibrary()
+    await user.type(search(), 'zzz')
+    expect(screen.getByText('No habit matches "zzz".')).toBeTruthy()
+  })
+
+  it('adds a habit as daily or anytime from its row', async () => {
+    const user = await renderLibrary()
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Add Boxing' }))
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Daily' }))
+    await waitFor(() => expect(libRow('Boxing').textContent).toMatch(/On list · Daily/))
+    expect(within(libRow('Boxing')).queryAllByRole('button')).toEqual([])
+    await user.click(within(libRow('Running')).getByRole('button', { name: 'Add Running' }))
+    await user.click(within(libRow('Running')).getByRole('button', { name: 'Anytime' }))
+    await waitFor(() => expect(libRow('Running').textContent).toMatch(/On list · Anytime/))
+    expect(await store.activeHabits()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ habitId: 'boxing', kind: 'daily' }),
+        expect.objectContaining({ habitId: 'running', kind: 'anytime' }),
+      ]),
+    )
+  })
+
+  it('opens the daily/anytime choice on one row at a time', async () => {
+    const user = await renderLibrary()
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Add Boxing' }))
+    await user.click(within(libRow('Running')).getByRole('button', { name: 'Add Running' }))
+    expect(within(libRow('Boxing')).getByRole('button', { name: 'Add Boxing' })).toBeTruthy()
+    expect(within(libRow('Running')).getByRole('button', { name: 'Daily' })).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: 'Daily' })).toHaveLength(1)
+  })
+
+  it('closes the choice on a chip change, a search, or leaving the Library', async () => {
+    const user = await renderLibrary()
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Add Boxing' }))
+    await user.click(chip('Study'))
+    await user.click(chip('Fitness'))
+    expect(choiceOpen()).toBe(false)
+
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Add Boxing' }))
+    await user.type(search(), 'box')
+    expect(choiceOpen()).toBe(false)
+
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Add Boxing' }))
+    await user.click(within(strip()).getByRole('button', { name: 'Today' }))
+    await user.click(within(strip()).getByRole('button', { name: 'Library' }))
+    expect(choiceOpen()).toBe(false)
+  })
+
+  it('shows a habit already on your list as a tag, with no buttons', async () => {
+    await store.addToList('flashcards', 'anytime')
+    const user = await renderLibrary()
+    await user.click(chip('Study'))
+    await waitFor(() => expect(libRow('Flashcards').textContent).toMatch(/On list · Anytime/))
+    expect(within(libRow('Flashcards')).queryAllByRole('button')).toEqual([])
+  })
+
+  it('does not show custom habits', async () => {
+    await store.saveCustomHabit({ name: 'Juggling', category: 'fitness', weights: { proficiency: 100 } })
+    const user = await renderLibrary()
+    expect(libNames()).not.toContain('Juggling')
+    await user.type(search(), 'jugg')
+    expect(screen.getByText('No habit matches "jugg".')).toBeTruthy()
+  })
+
+  it('a habit added in the Library shows on Today', async () => {
+    const user = await renderLibrary()
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Add Boxing' }))
+    await user.click(within(libRow('Boxing')).getByRole('button', { name: 'Daily' }))
+    await user.click(within(strip()).getByRole('button', { name: 'Today' }))
+    const daily = await screen.findByRole('region', { name: 'Daily' })
+    expect(within(daily).getByRole('button', { name: /^Boxing/ })).toBeTruthy()
+  })
+
+  it('remembers the last chip while the app is open', async () => {
+    const user = await renderLibrary()
+    await user.click(chip('Reading'))
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    await user.click(within(await menu()).getByRole('button', { name: 'Library' }))
+    await screen.findByRole('list', { name: 'Habits' })
+    expect(pressed()).toEqual(['Reading'])
+  })
+})
+
 describe('rank banner (placeholder until step 5)', () => {
   it('shows a rank-up, and dismisses on tap', async () => {
     await seed('courage', 58)
