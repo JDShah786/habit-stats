@@ -44,6 +44,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .view { position: absolute; inset: 0; }
 .ghost { position: absolute; left: -14px; bottom: 30px; transform: rotate(-10deg); transform-origin: left bottom; pointer-events: none; }
 .ghost-word { font-size: 104px; color: color-mix(in srgb, var(--g) 12%, transparent); white-space: nowrap; letter-spacing: -0.02em; }
+/* The background word drifts left in a seamless loop (4 copies, shift by 2), so the whole word reads over time. */
+.marquee { display: inline-block; animation: marquee var(--dur, 40s) linear infinite; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.rm .marquee { animation: none; }
 
 /* Command menu */
 .tagline { position: absolute; left: 20px; top: 150px; font: 800 12px var(--f-display); letter-spacing: 0.2em; color: var(--muted); transform: rotate(-6deg); }
@@ -234,7 +238,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 
   <!-- Home: command menu -->
   <section class="view" id="menuView" aria-label="Menu">
-    <div class="ghost"><div class="ghost-word d">HABITS</div></div>
+    <div class="ghost"><div class="ghost-word d" id="menuGhost"></div></div>
     <div class="tagline" id="tagline">WHAT WILL YOU DO TODAY?</div>
     <nav class="menu" id="menu">
       <button class="d sel" data-press>TODAY</button>
@@ -479,9 +483,18 @@ function showMenu() {
 function showSections(i) {
   $('menuView').hidden = true; $('secView').hidden = false
   idx = i; trackAnim?.stop(); setTrack(-i * W())
-  $('ghostWord').textContent = SECTIONS[i]
+  setGhost($('ghostWord'), SECTIONS[i])
   enterPane(i)
 }
+
+// Background word: same slow speed (px per second) whatever the word's length.
+function setGhost(el, word) {
+  const unit = word + '  '
+  el.innerHTML = `<span class="marquee">${unit.repeat(4)}</span>`
+  const m = el.firstChild, loop = m.offsetWidth / 2
+  m.style.setProperty('--dur', (loop ? loop / 22 : word.length * 9) + 's')
+}
+setGhost($('menuGhost'), 'HABITS')
 
 // ---------- Swipe between sections ----------
 const track = $('track'), panes = [...track.children], tabs = [...$('tabs').querySelectorAll('button')]
@@ -504,7 +517,7 @@ function goTo(i, velocity = 0) {
   else trackAnim = animate(tx, target, { type: 'spring', stiffness: 380, damping: 38, velocity, onUpdate: setTrack })
   if (changed) {
     enterPane(i)
-    $('ghostWord').textContent = SECTIONS[i]
+    setGhost($('ghostWord'), SECTIONS[i])
     fx($('ghostWord'), { y: [50, 0], opacity: [0, 1] }, SOFT)
   }
 }
