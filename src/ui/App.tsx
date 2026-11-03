@@ -62,7 +62,7 @@ export function App({ store, now = () => new Date() }: Props) {
         <Bubbles />
         <DateBlock now={now} />
         {view === 'menu' ? (
-          <Menu current={index} reduced={reduced} onChoose={choose} />
+          <Menu store={store} current={index} reduced={reduced} onChoose={choose} />
         ) : (
           <Sections
             index={index}

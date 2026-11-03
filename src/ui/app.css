@@ -265,6 +265,80 @@ button:disabled {
   box-shadow: 8px 8px 0 var(--black), 10px 10px 0 var(--ink);
 }
 
+/* Today's list card on the menu */
+
+.card {
+  position: absolute;
+  left: 16px;
+  bottom: calc(24px + var(--safe-bottom));
+  width: min(240px, calc(100% - 64px));
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  text-align: left;
+  border-radius: 26px;
+  background: var(--black);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--g);
+  rotate: 3deg;
+}
+
+.card-title {
+  margin-bottom: 2px;
+  font: 900 italic 15px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g);
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.card-row i {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.5);
+}
+
+.card-row i.on {
+  border: 0;
+  background: radial-gradient(circle at 32% 30%, var(--ink) 0 14%, var(--lime) 24%, var(--g) 60%);
+  box-shadow: 0 0 8px var(--g);
+}
+
+.card-row .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-row em {
+  font: 900 italic 14px var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-more {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.card-count {
+  margin-top: 2px;
+  font: 800 11px var(--display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
 /* Sections: MENU button, section strip, swipe track */
 
 .menu-btn {
@@ -398,10 +472,11 @@ button:disabled {
   background: radial-gradient(circle at 30% 30%, var(--ink) 0 12%, color-mix(in srgb, var(--lime) 85%, transparent) 30%, color-mix(in srgb, var(--g) 55%, transparent) 62%, transparent 72%);
 }
 
-/* Today (full restyle comes in 3b) */
+/* Today */
 
 h1,
-h2 {
+h2,
+h3 {
   font-family: var(--display);
   font-weight: 900;
   font-style: italic;
@@ -417,24 +492,35 @@ h2 {
   border: 2px solid var(--g);
   border-radius: 999px;
   padding: 3px 12px;
-  margin: 18px 0 12px;
+  margin: 10px 0 0;
   rotate: -4deg;
+}
+
+section + section h2 {
+  margin-top: 28px;
 }
 
 .rows {
   list-style: none;
   margin: 0;
-  padding: 0 10px 0 0;
-  display: grid;
-  gap: 14px;
+  padding: 0;
+}
+
+/* Each pill leaves room above it for its big minutes number, and steps in by --off. */
+.rows li {
+  margin-top: 22px;
+  margin-left: var(--off, 0px);
+  width: calc(100% - var(--off, 0px) - 24px);
 }
 
 .habit-row {
+  position: relative;
   width: 100%;
+  height: 58px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 0 64px 0 16px;
   text-align: left;
   border-radius: 999px;
   background: var(--black);
@@ -443,10 +529,23 @@ h2 {
   rotate: -4deg;
 }
 
-.habit-row.done {
+.habit-row .fill {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
   background: linear-gradient(100deg, var(--g), var(--lime));
+  transform-origin: left;
+}
+
+.habit-row > :not(.fill) {
+  position: relative;
+  z-index: 1; /* above the fill: flex `order` paints the tick before it otherwise */
+}
+
+.habit-row.lit {
   color: var(--black);
   border-color: var(--ink);
+  box-shadow: 7px 7px 0 var(--black), 9px 9px 0 var(--line);
 }
 
 .habit-row .name {
@@ -459,17 +558,88 @@ h2 {
   white-space: nowrap;
 }
 
+/* Sits over the pill's right end; last in the markup so the button's name starts with the habit. */
 .habit-row .minutes {
-  font: 900 italic 20px var(--display);
+  position: absolute;
+  right: -6px;
+  top: -20px;
+  font: 900 italic 38px / 1 var(--display);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-shadow: 3px 3px 0 var(--black);
+  font-variant-numeric: tabular-nums;
 }
 
-.habit-row .tick {
-  font-weight: 900;
-  width: 18px;
+.habit-row .minutes small {
+  font-size: 15px;
+}
+
+.chk {
+  order: -1;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.5);
+}
+
+.chk.on {
+  border: 0;
+  background: radial-gradient(circle at 32% 30%, var(--ink) 0 14%, var(--black) 22%);
 }
 
 .empty {
   padding: 24px 0;
+}
+
+.empty p {
+  margin: 0 0 18px;
+  color: var(--muted);
+}
+
+/* Nearest rank */
+
+.near {
+  margin: 36px 24px 0 0;
+  rotate: -4deg;
+}
+
+.near .top {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.near b {
+  font: 900 italic 26px var(--display);
+  text-transform: uppercase;
+}
+
+.near .up {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--black);
+  font: 900 italic 12px var(--display);
+  text-transform: uppercase;
+}
+
+.bar {
+  position: relative;
+  margin-top: 8px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--black);
+  border: 2px solid var(--ink);
+  overflow: hidden;
+}
+
+.bar .fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--g), var(--lime));
+  transform-origin: left;
 }
 
 .primary {
@@ -488,29 +658,50 @@ h2 {
   position: fixed;
   inset: 0;
   z-index: 20;
-  display: flex;
-  align-items: flex-end;
   background: rgb(0 0 0 / 0.62);
+  animation: fade-in 160ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 21;
   width: 100%;
   max-width: 480px;
+  max-height: calc(100dvh - 24px - var(--safe-top));
+  overflow-y: auto;
   margin: 0 auto;
-  padding: 20px 20px calc(24px + var(--safe-bottom));
+  padding: 6px 20px calc(24px + var(--safe-bottom));
   display: grid;
-  gap: 12px;
+  gap: 14px;
   background: linear-gradient(180deg, var(--depth), var(--black) 70%);
   border-top: 3px solid var(--g);
   border-radius: 28px 28px 0 0;
-  animation: slide-up 160ms ease-out;
 }
 
-@keyframes slide-up {
-  from {
-    transform: translateY(40px);
-    opacity: 0;
-  }
+.sheet p {
+  margin: 0;
+}
+
+/* The drag handle area: the browser must not scroll or zoom from it. */
+.sheet-grab {
+  touch-action: none;
+}
+
+.handle {
+  width: 44px;
+  height: 5px;
+  margin: 4px auto 10px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 0.3);
 }
 
 .sheet-head {
@@ -521,33 +712,132 @@ h2 {
 }
 
 .sheet-head h2 {
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
-  rotate: none;
-  font-size: 30px;
+  rotate: -3deg;
+  transform-origin: left;
+  font-size: 32px;
+  line-height: 1.05;
   letter-spacing: -0.02em;
   color: var(--ink);
+  text-shadow: 3px 3px 0 var(--black);
+  overflow-wrap: anywhere;
 }
 
-.sheet-head button,
-.sessions button,
-.quick button {
-  padding: 8px 14px;
-  border-radius: 999px;
+.sheet .close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: 2px solid rgb(255 255 255 / 0.5);
+  font-size: 16px;
+  font-weight: 800;
 }
 
-.sheet p {
-  margin: 0;
+.weights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
+.weights span {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 2px solid var(--g);
+  color: var(--g);
+  font: 900 italic 11px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.minutes-input {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* Width follows the digits (set inline) so MIN sits right after the number. */
+input.mins {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font: 900 italic 80px / 1 var(--display);
+  letter-spacing: -0.04em;
+  text-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--g);
+  caret-color: var(--lime);
+  font-variant-numeric: tabular-nums;
+}
+
+input.mins::placeholder {
+  color: rgb(255 255 255 / 0.25);
+  text-shadow: none;
+}
+
+.unit {
+  font: 900 italic 20px var(--display);
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+/* Five round bubbles and a wider CUSTOM pill, shrinking to fit narrow phones. */
+.quick {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.8fr);
+  gap: 8px;
+  max-width: 380px;
+}
+
+.quick button {
+  aspect-ratio: 1;
+  border-radius: 999px;
+  color: var(--black);
+  font: 900 italic 18px var(--display);
+  box-shadow: 3px 3px 0 var(--black);
+  background: radial-gradient(circle at 32% 28%, var(--ink) 0 10%, var(--lime) 24%, var(--g) 75%);
+}
+
+.quick button.on {
+  box-shadow: 0 0 0 3px var(--ink), 4px 4px 0 3px var(--black);
+}
+
+.quick .custom {
+  aspect-ratio: auto;
+  background: var(--black);
+  color: var(--g);
+  border: 2px dashed var(--g);
+  box-shadow: none;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sess h3 {
+  font: 800 11px var(--display);
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+.sess > p {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+/* Many sessions scroll inside the sheet instead of pushing it off the screen. */
 .sessions {
   list-style: none;
-  margin: 0;
-  padding: 0;
+  margin: 8px 0 0;
+  padding: 0 4px 0 0;
   display: grid;
-  gap: 6px;
+  gap: 8px;
+  max-height: 128px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sessions li {
@@ -559,14 +849,28 @@ h2 {
   border: 2px solid rgb(255 255 255 / 0.3);
 }
 
-.sessions li > span,
+.sessions li > span {
+  flex: 1;
+  font: 900 italic 18px var(--display);
+}
+
 .sessions li > label {
   flex: 1;
+}
+
+.sessions button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .sessions input {
   width: 72px;
   margin-left: 8px;
+  padding: 6px 12px;
+  font-size: 18px;
 }
 
 label {
@@ -587,26 +891,38 @@ input:focus {
   border-color: var(--g);
 }
 
-.minutes-input {
-  display: grid;
-  gap: 6px;
+.log {
+  width: calc(100% - 8px);
+  margin-top: 4px;
+  height: 58px;
+  padding: 0;
+  font-size: 24px;
+  box-shadow: 6px 6px 0 var(--black), 8px 8px 0 var(--ink);
 }
 
-.quick {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+/* "+3 COURAGE" floats up in the space right of the minutes. */
+.gains {
+  position: absolute;
+  right: 4px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
 }
 
-.quick button {
+.gains span {
   font: 900 italic 18px var(--display);
-  color: var(--black);
-  border: 0;
-  background: radial-gradient(circle at 32% 28%, var(--ink) 0 10%, var(--lime) 24%, var(--g) 75%);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--lime);
+  text-shadow: 3px 3px 0 var(--black);
 }
 
 .error {
   color: var(--warn);
+  font-weight: 700;
+  font-size: 14px;
 }
 
 /* Rank banner (placeholder until step 5) */
