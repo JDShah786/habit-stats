@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Palette swatches</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;1,900&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 390px; background: #000; font-family: 'Montserrat', sans-serif; color: #fff; }
+  section { padding: 22px 18px 26px; background: radial-gradient(120% 80% at 90% 0%, var(--bg2), var(--bg) 65%); border-bottom: 3px solid #000; }
+  h2 { margin: 0 0 14px; font-weight: 900; font-style: italic; font-size: 30px; }
+  h2 small { display: block; font-size: 12px; font-style: normal; font-weight: 800; letter-spacing: 0.14em; color: var(--muted); margin-top: 2px; }
+  .sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .sw div { text-align: center; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; color: var(--muted); }
+  .sw i { display: block; height: 58px; border-radius: 16px; margin-bottom: 6px; border: 1px solid rgb(255 255 255 / 0.18); }
+  .sw b { display: block; color: #fff; font-size: 10.5px; }
+  .demo { margin-top: 16px; display: grid; gap: 10px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 999px; background: rgb(255 255 255 / 0.07); border: 1px solid rgb(255 255 255 / 0.10); }
+  .dot { width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #fff 0 12%, var(--accent2) 22%, var(--accent) 60%); box-shadow: 0 0 14px var(--accent); }
+  .row span { flex: 1; font-weight: 600; }
+  .row em { font-weight: 900; font-size: 18px; }
+  .bar { height: 12px; border-radius: 999px; background: rgb(255 255 255 / 0.08); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--accent), var(--accent2)); box-shadow: 0 0 12px var(--accent); border-radius: 999px; }
+  .btn { justify-self: start; padding: 11px 26px; border-radius: 999px; font-weight: 900; font-style: italic; color: var(--bg); background: linear-gradient(180deg, var(--accent2), var(--accent)); box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 55%, transparent); }
+</style>
+</head>
+<body>
+  <section style="--bg:#021a14;--bg2:#053a2c;--accent:#00e59b;--accent2:#7dffd0;--muted:#8fc9b5">
+    <h2>A · Emerald Tide<small>DEEP SEA GREEN · CALM, WATERY</small></h2>
+    <div class="sw">
+      <div><i style="background:#021a14"></i><b>#021A14</b>Background</div>
+      <div><i style="background:#053a2c"></i><b>#053A2C</b>Depth</div>
+      <div><i style="background:#00e59b"></i><b>#00E59B</b>Accent</div>
+      <div><i style="background:#7dffd0"></i><b>#7DFFD0</b>Highlight</div>
+      <div><i style="background:#ffffff"></i><b>#FFFFFF</b>Text</div>
+    </div>
+    <div class="demo"><div class="row"><i class="dot"></i><span>Boxing</span><em>45</em></div><div class="bar"><i></i></div><span class="btn">LOG TIME</span></div>
+  </section>
+
+  <section style="--bg:#050807;--bg2:#0d1f12;--accent:#39ff7a;--accent2:#c6ff3d;--muted:#9bb8a2">
+    <h2>B · Neon Lime<small>NEAR-BLACK · LOUD, ELECTRIC</small></h2>
+    <div class="sw">
+      <div><i style="background:#050807"></i><b>#050807</b>Background</div>
+      <div><i style="background:#0d1f12"></i><b>#0D1F12</b>Depth</div>
+      <div><i style="background:#39ff7a"></i><b>#39FF7A</b>Accent</div>
+      <div><i style="background:#c6ff3d"></i><b>#C6FF3D</b>Highlight</div>
+      <div><i style="background:#ffffff"></i><b>#FFFFFF</b>Text</div>
+    </div>
+    <div class="demo"><div class="row"><i class="dot"></i><span>Boxing</span><em>45</em></div><div class="bar"><i></i></div><span class="btn">LOG TIME</span></div>
+  </section>
+
+  <section style="--bg:#0a1d19;--bg2:#0f3a33;--accent:#2ee6c5;--accent2:#e9fff8;--muted:#a6d6cb">
+    <h2>C · Jade Glass<small>DARK JADE · SOFT, ICY</small></h2>
+    <div class="sw">
+      <div><i style="background:#0a1d19"></i><b>#0A1D19</b>Background</div>
+      <div><i style="background:#0f3a33"></i><b>#0F3A33</b>Depth</div>
+      <div><i style="background:#2ee6c5"></i><b>#2EE6C5</b>Accent</div>
+      <div><i style="background:#e9fff8"></i><b>#E9FFF8</b>Highlight</div>
+      <div><i style="background:#ffffff"></i><b>#FFFFFF</b>Text</div>
+    </div>
+    <div class="demo"><div class="row"><i class="dot"></i><span>Boxing</span><em>45</em></div><div class="bar"><i></i></div><span class="btn">LOG TIME</span></div>
+  </section>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Layout concepts</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,600;0,800;1,800;1,900&display=swap" rel="stylesheet" />
+<style>
+  /* Neon Lime, Persona-style composition: big date, tilted staggered panels, inverted highlights, outlined words. */
+  :root { --bg: #050807; --depth: #0d1f12; --g: #39ff7a; --lime: #c6ff3d; --ink: #fff; --muted: #9bb8a2; }
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 390px; height: 844px; overflow: hidden; position: relative; font-family: 'Montserrat', sans-serif; color: var(--ink);
+    background: radial-gradient(110% 60% at 100% 0%, var(--depth), var(--bg) 70%); }
+  .concept { display: none; position: absolute; inset: 0; }
+  body[data-l='1'] .c1, body[data-l='2'] .c2 { display: block; }
+
+  .bubble { position: absolute; border-radius: 50%; opacity: 0.5;
+    background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 0.6), color-mix(in srgb, var(--g) 45%, transparent) 40%, transparent 72%); }
+  .stripe { position: absolute; left: -60px; right: -60px; height: 120px; background: linear-gradient(90deg, var(--g), var(--lime)); opacity: 0.12; transform: rotate(-14deg); }
+  .wave { position: absolute; }
+
+  /* Date block (calendar-style corner) */
+  .date { position: absolute; left: 18px; top: 26px; transform: rotate(-6deg); transform-origin: left top; }
+  .date .num { font-weight: 900; font-style: italic; font-size: 76px; line-height: 0.9; letter-spacing: -0.04em;
+    text-shadow: 5px 5px 0 #000, 7px 7px 0 var(--g); }
+  .date .num small { font-size: 44px; }
+  .date .day { display: inline-block; margin-top: 8px; padding: 4px 14px; border-radius: 999px; background: var(--g); color: #000; font-weight: 900; font-style: italic; font-size: 20px; box-shadow: 4px 4px 0 #000; }
+  .date .time { display: inline-block; margin-left: 8px; font-weight: 800; letter-spacing: 0.2em; font-size: 12px; color: var(--lime); }
+
+  /* Big outlined decorative word */
+  .ghost { position: absolute; font-weight: 900; font-style: italic; color: color-mix(in srgb, var(--g) 13%, transparent); white-space: nowrap; }
+
+  /* Concept 1: staggered tilted pills */
+  .label { display: inline-block; padding: 3px 12px; border-radius: 999px; border: 2px solid var(--g); color: var(--g); font-weight: 900; font-style: italic; font-size: 13px; letter-spacing: 0.12em; transform: rotate(-4deg); }
+  .pill { position: relative; display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 22px 0 16px; border-radius: 999px; transform: rotate(-4deg); margin-top: 14px;
+    background: #000; border: 2px solid rgb(255 255 255 / 0.85); box-shadow: 6px 6px 0 color-mix(in srgb, var(--g) 35%, transparent); }
+  .pill .chk { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.5); flex: none; }
+  .pill .nm { flex: 1; font-weight: 800; font-size: 18px; }
+  .pill .mn { font-weight: 900; font-style: italic; font-size: 40px; letter-spacing: -0.03em; position: absolute; right: -6px; top: -18px; text-shadow: 3px 3px 0 #000; }
+  .pill .mn small { font-size: 15px; }
+  .pill.on { background: linear-gradient(100deg, var(--g), var(--lime)); color: #000; border-color: #fff; box-shadow: 7px 7px 0 #000, 9px 9px 0 rgb(255 255 255 / 0.85); }
+  .pill.on .chk { border: 0; background: radial-gradient(circle at 32% 30%, #fff 0 14%, #000 22%); }
+  .pill.on .mn { color: #fff; text-shadow: 3px 3px 0 #000; }
+  .rank { position: absolute; left: 20px; right: 20px; bottom: 116px; transform: rotate(-4deg); }
+  .rank .top { display: flex; align-items: baseline; gap: 10px; }
+  .rank b { font-weight: 900; font-style: italic; font-size: 28px; }
+  .rank .up { background: var(--lime); color: #000; font-weight: 900; font-style: italic; padding: 2px 10px; border-radius: 999px; font-size: 13px; }
+  .rank .bar { margin-top: 8px; height: 16px; border-radius: 999px; background: #000; border: 2px solid #fff; overflow: hidden; }
+  .rank .bar i { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--g), var(--lime)); }
+  .nav { position: absolute; left: -20px; right: -20px; bottom: 18px; height: 70px; background: #000; transform: rotate(-4deg); border-top: 3px solid var(--g);
+    display: flex; align-items: center; justify-content: space-around; padding: 0 30px; }
+  .nav span { font-weight: 900; font-style: italic; font-size: 15px; color: var(--muted); letter-spacing: 0.04em; }
+  .nav .on { color: #000; background: var(--g); padding: 8px 16px; border-radius: 999px; font-size: 18px; box-shadow: 4px 4px 0 #fff; }
+
+  /* Concept 2: command menu */
+  .menu { position: absolute; right: -6px; top: 236px; display: grid; gap: 4px; justify-items: end; transform: rotate(-10deg); transform-origin: right; }
+  .menu span { font-weight: 900; font-style: italic; font-size: 42px; letter-spacing: -0.03em; line-height: 1.05; color: #fff; text-shadow: 4px 4px 0 #000; padding: 0 22px; white-space: nowrap; }
+  .menu span:nth-child(2) { margin-right: 26px; } .menu span:nth-child(3) { margin-right: 52px; } .menu span:nth-child(4) { margin-right: 78px; }
+  .menu .sel { background: linear-gradient(100deg, var(--g), var(--lime)); color: #000; text-shadow: none; border-radius: 999px; box-shadow: 8px 8px 0 #000, 10px 10px 0 #fff; font-size: 50px; }
+  .menu .hint { font-size: 12px; font-style: normal; font-weight: 800; letter-spacing: 0.2em; color: var(--lime); text-shadow: none; margin-right: 30px; margin-top: 8px; }
+  .card { position: absolute; left: 16px; bottom: 34px; width: 230px; padding: 14px 16px; border-radius: 26px; background: #000; border: 2px solid #fff; box-shadow: 6px 6px 0 var(--g); transform: rotate(3deg); }
+  .card h3 { font-weight: 900; font-style: italic; font-size: 16px; color: var(--g); margin-bottom: 8px; letter-spacing: 0.06em; }
+  .card p { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; margin-top: 6px; }
+  .card p i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.5); }
+  .card p i.on { border: 0; background: radial-gradient(circle at 32% 30%, #fff 0 14%, var(--lime) 24%, var(--g) 60%); box-shadow: 0 0 8px var(--g); }
+  .card p em { margin-left: auto; font-weight: 900; }
+  .tagline { position: absolute; left: 20px; top: 190px; font-weight: 800; font-size: 12px; letter-spacing: 0.2em; color: var(--muted); transform: rotate(-6deg); }
+</style>
+</head>
+<body>
+  <div class="stripe" style="top:150px"></div>
+  <div class="bubble" style="width:170px;height:170px;right:-50px;top:-30px"></div>
+  <div class="bubble" style="width:50px;height:50px;right:150px;top:120px"></div>
+  <div class="bubble" style="width:110px;height:110px;left:-40px;bottom:180px"></div>
+  <div class="bubble" style="width:24px;height:24px;left:120px;bottom:300px"></div>
+
+  <div class="date"><div class="num">10<small>/</small>27</div><span class="day">TUE</span><span class="time">EVENING</span></div>
+
+  <!-- Concept 1: Today as a staggered, tilted list -->
+  <div class="concept c1">
+    <div class="ghost" style="right:-18px;top:300px;font-size:120px;transform:rotate(90deg);transform-origin:right top">TODAY</div>
+    <div style="position:absolute;left:18px;right:46px;top:212px">
+      <span class="label">DAILY</span>
+      <div class="pill on" style="margin-left:0"><i class="chk"></i><span class="nm">Boxing</span><span class="mn">45<small>m</small></span></div>
+      <div class="pill" style="margin-left:14px"><i class="chk"></i><span class="nm">Running</span><span class="mn">0<small>m</small></span></div>
+      <div style="height:22px"></div>
+      <span class="label">ANYTIME</span>
+      <div class="pill on" style="margin-left:6px"><i class="chk"></i><span class="nm">Guitar practice</span><span class="mn">15<small>m</small></span></div>
+      <div class="pill" style="margin-left:20px"><i class="chk"></i><span class="nm">Flashcards</span><span class="mn">0<small>m</small></span></div>
+    </div>
+    <div class="rank"><div class="top"><b>COURAGE</b><span class="up">RANK 2 · STEADY</span></div><div class="bar"><i></i></div></div>
+    <nav class="nav"><span class="on">TODAY</span><span>LIBRARY</span><span>STATS</span><span>MY HABITS</span></nav>
+  </div>
+
+  <!-- Concept 2: command menu home -->
+  <div class="concept c2">
+    <div class="tagline">WHAT WILL YOU DO TODAY?</div>
+    <div class="ghost" style="left:-14px;top:600px;font-size:104px;transform:rotate(-10deg)">HABITS</div>
+    <div class="menu">
+      <span class="sel">TODAY</span>
+      <span>LIBRARY</span>
+      <span>STATS</span>
+      <span>MY HABITS</span>
+      <span class="hint">2 OF 4 DAILY DONE</span>
+    </div>
+    <div class="card">
+      <h3>TODAY'S LIST</h3>
+      <p><i class="on"></i>Boxing<em>45m</em></p>
+      <p><i></i>Running<em>0m</em></p>
+      <p><i class="on"></i>Guitar practice<em>15m</em></p>
+    </div>
+  </div>
+
+  <script>document.body.dataset.l = new URLSearchParams(location.search).get('l') || '1'</script>
+</body>
+</html>

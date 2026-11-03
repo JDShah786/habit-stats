@@ -8,12 +8,13 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 - [ ] 4. Screens: Today → Library → Stats → My habits
 - [ ] 5. Rank-up and graduation animations
 - [ ] 6. Settings export/import
-- [ ] 7. PWA install + offline, then first deploy
+- [ ] 7. PWA install + offline (deploy already runs from main, see decisions log)
 
 ## Notes for later steps
 
 - Step 4: custom habit weights default to equal (SPEC). Decide how 3 stats split 100 (e.g. 34/33/33), and whether custom weights must be multiples of 10.
 - Step 4: custom habit names with no Latin letters or digits get no id and are rejected. Revisit if needed.
+- Step 4/5: Lottie player library not chosen yet. Needs Hamid's approval before any Lottie code. Claude's recommendation: lottie-web light build (MIT, ~47 KB gzipped, bundles in so it works offline; skips "expressions", so check each file). Decide when a mockup needs a specific animation.
 - Library goal (Hamid): ship the most common habits in the world, so custom habits are rarely needed. Grow habits.json over time.
 
 ## Decisions log
@@ -40,12 +41,24 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-10-27 | 3 | "Remove" only hides a habit from the list. Its sessions, points and (for custom habits) definition stay. A habit's history is never wiped. | Earned time stays earned; replays always know every habit's weights. | → in SPEC |
 | 2026-10-27 | 3 | Re-adding a habit sets addedOn to the latest add. | Hamid's call. | → in SPEC |
 | 2026-10-27 | 3 | Custom habit ids are 'custom-' + a slug of the name. Presets may never start with 'custom-'. Two custom habits can't share a name. | The library will keep growing; no future preset can clash with a custom id. | → in SPEC |
-| 2026-10-27 | 4 | Look: bold, Persona-inspired (dark, one red accent, angled panels), all original shapes. Headings use Anton (self-hosted via @fontsource/anton, OFL); body uses the iPhone system font. | Hamid's call; the font works offline. | No |
-| 2026-10-27 | 4 | Navigation: bottom tab bar (Today, Stats, Library, My habits). Settings will be a gear on My habits. | Standard iPhone pattern; no router library. | No |
+| 2026-10-27 | 4 | Look: bold, Persona-inspired (dark, one red accent, angled panels), all original shapes. Headings use Anton (self-hosted via @fontsource/anton, OFL); body uses the iPhone system font. | Hamid's call; the font works offline. | Superseded by the design rows below |
+| 2026-10-27 | 4 | Navigation: bottom tab bar (Today, Stats, Library, My habits). Settings will be a gear on My habits. | Standard iPhone pattern; no router library. | Superseded by the command-menu row below |
 | 2026-10-27 | 4 | Screen tests use jsdom + React Testing Library + user-event (dev-only). | Screens tested in CI like everything else. | No |
-| 2026-10-27 | 4 | One PR per screen: 4a Today + app shell, 4b Stats, 4c Library, 4d My habits. | Smaller reviews. | No |
+| 2026-10-27 | 4 | One PR per screen: 4a Today + app shell, 4b Library, 4c Stats, 4d My habits. | Smaller reviews. | No |
 | 2026-10-27 | 4 | Logging: tap a habit to open a sheet with a minutes box, quick buttons (5/10/15/30/60), and today's sessions with edit/delete. | Hamid's call. | No |
 | 2026-10-27 | 4 | A daily habit is ticked by any session today. No targets. | Matches no streaks / no missed marker. | No |
 | 2026-10-27 | 4 | Until step 5, rank-ups and graduation show as a plain banner (tap to dismiss). Rank-downs stay silent. | Events visible right away; step 5 replaces it. | No |
 | 2026-10-27 | 4 | Build order changes to Today → Library → Stats → My habits. | The app is usable on the phone (add habits, log) one PR sooner. | No |
 | 2026-10-27 | 0 | Remote checking: main deploys to GitHub Pages; every PR gets its own preview link with its own database (VITE_DB_NAME), so previews never touch real data. Claude screenshots previews and sends them to Hamid. Deploy moves forward from step 7; PWA install/offline stays in step 7. | Hamid can review by phone from anywhere. | No |
+| 2026-10-27 | 4 | Palette "Neon Lime": background #050807, depth #0D1F12, accent #39FF7A, highlight #C6FF3D, text #FFFFFF. Replaces the red accent. | Hamid felt the first build didn't match the Persona aesthetic; picked from the palette mockups. | No |
+| 2026-10-27 | 4 | Mood: the "water and bubbles" feel of Persona 3 Reload, but green. Rounded shape language: pills, glossy bubbles, wave lines. All shapes original. | Hamid's call. Inspired only; no Persona/Atlus assets (none are licensed for app use). | No |
+| 2026-10-27 | 4 | Headings: Montserrat heavy italic, self-hosted via Fontsource (OFL). Replaces Anton. Body stays the iPhone system font. No -webkit-text-stroke on Montserrat; use solid shadows instead. | Fits the rounded look; works offline. Stroke shows inner-contour artifacts on the variable font. | No |
+| 2026-10-27 | 4 | Animation: Motion plus Lottie (free LottieFiles animations; check each file's license). Which Lottie player to use is still open (see notes). | Motion for screen effects; Lottie for ready-made bubble/splash animations. | No |
+| 2026-11-03 | 4 | Lots of animation, Persona-style: taps, screen changes, sheets and rank-ups all animate. Motion drives everything that reacts to touch. Lottie is only for a few pre-drawn set pieces (e.g. a rank-up burst). All motion is original. | Hamid wants the app to feel alive like the Persona menus. Lottie can't react to touch; Motion can. | No |
+| 2026-11-03 | 4 | Swiping left/right moves between Today, Library, Stats and My habits, alongside the command menu. Built with Motion's drag gestures; no extra library. | Hamid's call. | No |
+| 2026-11-03 | 4 | Tap and screen-change animations are built with each screen. Step 5 stays rank-up and graduation. | They're part of the look, so each screen ships complete. | No |
+| 2026-11-03 | 4 | Respect the iPhone "Reduce Motion" setting: quick fades instead of big motion. | Cheap to do; some people get motion sick. | No |
+| 2026-11-03 | 4 | Next mockups are animated HTML prototypes, tappable on the phone (menu → Today, tap effect, swipe, log sheet, rank-up). Hamid approves the feel before any real code. | Motion is hard to judge from still images. | Process only, not SPEC |
+| 2026-10-27 | 4 | Layout: Persona-style composition. Big tilted date block, tilted staggered panels, inverted lime highlights (black text) with hard offset shadows, faint giant background words. | Hamid's call; see design/mockups/layouts.html. | No |
+| 2026-10-27 | 4 | Navigation: a command-menu home screen (big stacked italic words: TODAY / LIBRARY / STATS / MY HABITS) replaces the bottom tab bar. Tapping TODAY opens the tilted staggered Today list. Settings stays a gear on My habits; still no router library. | Persona-style menu feel; Hamid chose to use both layout concepts. | No |
+| 2026-11-03 | 4 | Mockups live in design/mockups/ (tracked) and are the reference for restyling. | Reviewable in PRs; survives between sessions. | Process only, not SPEC |
