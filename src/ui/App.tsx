@@ -2,11 +2,13 @@
 // rank banner. Opens on the menu.
 
 import { MotionConfig } from 'motion/react'
-import { useRef, useState } from 'react'
+import { useReducer, useRef, useState } from 'react'
 import type { RankEvent } from '../engine/stats'
+import type { Category } from '../library/library'
 import type { Store } from '../storage/store'
 import { hasAnnouncement } from './announce'
 import { Bubbles, DateBlock } from './Decor'
+import { Library } from './Library'
 import { Menu } from './Menu'
 import { SECTIONS } from './motionKit'
 import { RankBanner } from './RankBanner'
@@ -34,6 +36,9 @@ export function App({ store, now = () => new Date() }: Props) {
   const [wipe, setWipe] = useState<Wiping | null>(null)
   // True from a menu/MENU tap until the screen has swapped: taps in between are ignored.
   const busy = useRef(false)
+  const [category, setCategory] = useState<Category>('fitness') // Library's last chip, while the app is open
+  // Bumped when the Library changes your list, so the other sections reload it.
+  const [listVersion, listChanged] = useReducer((n: number) => n + 1, 0)
   const [events, setEvents] = useState<RankEvent[]>([])
   // A banner stays until dismissed; only a new announcement replaces it.
   const announce = (next: RankEvent[]) => {
@@ -69,9 +74,21 @@ export function App({ store, now = () => new Date() }: Props) {
             reduced={reduced}
             onIndex={setIndex}
             onMenu={toMenu}
-            renderSection={(i) =>
-              i === 0 ? <Today store={store} onEvents={announce} onGoToLibrary={() => setIndex(1)} /> : <ComingSoon title={SECTIONS[i]} />
-            }
+            renderSection={(i) => {
+              if (i === 0) return <Today store={store} listVersion={listVersion} onEvents={announce} onGoToLibrary={() => setIndex(1)} />
+              if (i === 1)
+                return (
+                  <Library
+                    store={store}
+                    active={index === 1}
+                    category={category}
+                    onCategory={setCategory}
+                    listVersion={listVersion}
+                    onListChange={listChanged}
+                  />
+                )
+              return <ComingSoon title={SECTIONS[i]} />
+            }}
           />
         )}
         <RankBanner events={events} onDismiss={() => setEvents([])} />

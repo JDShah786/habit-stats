@@ -13,8 +13,8 @@ export interface TodayData {
   totals: StatPoints
 }
 
-// Loads on open.
-export function useTodayData(store: Store) {
+// Loads on open, and again whenever `listVersion` changes.
+export function useTodayData(store: Store, listVersion = 0) {
   const [data, setData] = useState<TodayData | null>(null)
 
   const load = useCallback(async (): Promise<TodayData> => {
@@ -29,14 +29,14 @@ export function useTodayData(store: Store) {
 
   const reload = useCallback(async () => setData(await load()), [load])
 
-  // Load once on open; ignore the result if the screen closed first.
+  // Load on open and when the list changes; ignore a result that arrives after closing.
   useEffect(() => {
     let showing = true
     void load().then((d) => showing && setData(d))
     return () => {
       showing = false
     }
-  }, [load])
+  }, [load, listVersion])
 
   return [data, reload] as const
 }

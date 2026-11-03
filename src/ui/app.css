@@ -78,7 +78,9 @@ button:disabled {
   inset: 0;
   max-width: 480px;
   margin-inline: auto;
-  overflow: hidden;
+  /* clip, not hidden: a hidden box can still be scrolled sideways by focus or scrollIntoView,
+     which shifted the whole app off-screen. */
+  overflow: clip;
   user-select: none;
   -webkit-user-select: none;
   background: radial-gradient(110% 60% at 100% 0%, var(--depth), var(--bg) 70%);
@@ -403,7 +405,7 @@ button:disabled {
   right: 0;
   top: calc(196px + var(--safe-top));
   bottom: 0;
-  overflow: hidden;
+  overflow: clip; /* see .stage */
 }
 
 .track {
@@ -650,6 +652,155 @@ section + section h2 {
   box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
   font: 900 italic 20px var(--display);
   text-transform: uppercase;
+}
+
+/* Library */
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  margin-right: 12px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--black);
+  border: 2px solid var(--line);
+  rotate: -4deg;
+}
+
+.search span {
+  font: 900 italic 14px var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--g);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 16px; /* 16px or more: iPhone doesn't zoom in on focus */
+}
+
+.search input::placeholder {
+  color: var(--muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 12px 0 0;
+  rotate: -4deg;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 2px solid var(--g);
+  color: var(--g);
+  font: 900 italic 13px var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--g);
+  color: var(--black);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.no-match {
+  margin: 24px 0 0;
+  color: var(--muted);
+}
+
+.lib {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.lib-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  margin: 12px 12px 0 0;
+  padding: 8px 10px 8px 18px;
+  border-radius: 999px;
+  background: var(--black);
+  border: 2px solid rgb(255 255 255 / 0.45);
+  rotate: -4deg;
+}
+
+.lib-row.added {
+  border-color: var(--g);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--g) 40%, transparent);
+}
+
+.lib-row .meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.lib-row .name {
+  display: block;
+  font-weight: 800;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-row small {
+  display: block;
+  margin-top: 2px;
+  font: 800 10px var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.add {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--black);
+  font: 900 24px / 1 var(--display);
+  background: radial-gradient(circle at 32% 28%, var(--ink) 0 10%, var(--lime) 24%, var(--g) 75%);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.pick {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+
+.pick button {
+  padding: 9px 11px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--black);
+  font: 900 italic 12px var(--display);
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.tag {
+  flex: none;
+  padding-right: 8px;
+  white-space: nowrap;
+  font: 900 italic 11px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--g);
 }
 
 /* Log sheet (portal into <body>) */

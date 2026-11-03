@@ -11,10 +11,13 @@ import type { Store } from '../storage/store'
 import { burst, SNAP, SOFT, tapPoint } from './motionKit'
 import { usePrefersReducedMotion } from './reducedMotion'
 import { minutesOn, useTodayData } from './todayData'
+import { statsByWeight } from './libraryView'
 import { nearestRank, statName } from './todayView'
 
 interface Props {
   store: Store
+  // Changes whenever your list changes elsewhere (e.g. the Library); reloads the list.
+  listVersion: number
   onEvents: (events: RankEvent[]) => void
   onGoToLibrary: () => void
 }
@@ -24,9 +27,9 @@ const SECTIONS: [HabitKind, string][] = [
   ['anytime', 'Anytime'],
 ]
 
-export function Today({ store, onEvents, onGoToLibrary }: Props) {
+export function Today({ store, listVersion, onEvents, onGoToLibrary }: Props) {
   const reduced = usePrefersReducedMotion()
-  const [data, reload] = useTodayData(store)
+  const [data, reload] = useTodayData(store, listVersion)
   const [openId, setOpenId] = useState<string | null>(null)
 
   if (!data) return <h1>Today</h1>
@@ -145,10 +148,6 @@ const QUICK_MINUTES = [5, 10, 15, 30, 60]
 // Whole minutes, 1 or more (rule 1). Storage rejects anything else too.
 const isValidMinutes = (value: string) => /^\d+$/.test(value) && Number(value) >= 1
 
-// Biggest weight first; equal weights in SPEC order.
-const weightsOf = (habit: Habit) =>
-  STATS.filter((stat) => habit.weights[stat]).sort((a, b) => habit.weights[b]! - habit.weights[a]!)
-
 // Pulling the sheet down this far, or flicking it this fast, closes it.
 const CLOSE_DISTANCE = 90
 const CLOSE_SPEED = 600
@@ -245,7 +244,7 @@ function LogSheet({ habit, sessions, store, reduced, onEvents, onChange, onClose
             </button>
           </header>
           <div className="weights">
-            {weightsOf(habit).map((stat) => (
+            {statsByWeight(habit.weights).map((stat) => (
               <span key={stat}>
                 {statName(stat)} {habit.weights[stat]}
               </span>
