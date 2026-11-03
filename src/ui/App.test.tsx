@@ -173,20 +173,21 @@ describe('Today', () => {
     expect(running.classList.contains('lit')).toBe(false)
   })
 
-  it('shows the stat closest to its next rank, even with an empty list', async () => {
+  it('shows the stat closest to its next rank, even with an empty list, without the points needed', async () => {
     await renderApp()
     const next = await screen.findByRole('region', { name: 'Next rank' })
-    expect(next.textContent).toMatch(/charm/i)
-    expect(next.textContent).toMatch(/60 to rank 2/i)
+    expect(next.textContent).toMatch(/charm.*next: rank 2/i)
+    expect(next.textContent).not.toMatch(/60|to rank/i)
   })
 
   it('updates the next-rank bar after a log', async () => {
-    await seed('courage', 50)
+    await seed('courage', 58)
     await store.addToList('boxing', 'daily')
     const user = await renderApp()
-    expect((await screen.findByRole('region', { name: 'Next rank' })).textContent).toMatch(/courage.*10 to rank 2/i)
-    await logInSheet(user, await openSheet(user, 'Boxing'), '25') // +3 Courage
-    await waitFor(() => expect(screen.getByRole('region', { name: 'Next rank' }).textContent).toMatch(/courage.*7 to rank 2/i))
+    expect((await screen.findByRole('region', { name: 'Next rank' })).textContent).toMatch(/courage.*next: rank 2/i)
+    // +3 Courage (61, Rank 2: far from Rank 3), +2 Charm (2): Charm is now closest.
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Next rank' }).textContent).toMatch(/charm.*next: rank 2/i))
   })
 
   it('floats the points each stat gained after a log', async () => {
@@ -511,6 +512,82 @@ describe('Library', () => {
     await user.click(within(await menu()).getByRole('button', { name: 'Library' }))
     await screen.findByRole('list', { name: 'Habits' })
     expect(pressed()).toEqual(['Reading'])
+  })
+})
+
+describe('Stats', () => {
+  const renderStats = async () => {
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'Stats' }))
+    await screen.findByRole('list', { name: 'Stats' })
+    return user
+  }
+  const cards = () => within(screen.getByRole('list', { name: 'Stats' })).getAllByRole('listitem')
+  const card = (name: string) => cards().find((c) => c.querySelector('h2')!.textContent === name)!
+
+  it('shows the four stats in SPEC order with rank, title and total points', async () => {
+    await seed('courage', 130)
+    await renderStats()
+    expect(cards().map((c) => c.querySelector('h2')!.textContent)).toEqual(['Charm', 'Courage', 'Intelligence', 'Proficiency'])
+    expect(card('Courage').textContent).toMatch(/Rank 2/)
+    expect(card('Courage').textContent).toMatch(/Steady/)
+    expect(card('Courage').textContent).toMatch(/130 pts/)
+    expect(card('Charm').textContent).toMatch(/Rank 1.*Plain.*0 pts/)
+  })
+
+  it('never shows the points needed or the next title', async () => {
+    await seed('courage', 130)
+    await renderStats()
+    const text = card('Courage').textContent!
+    expect(text).not.toMatch(/200|70|to rank|next/i)
+    expect(text).not.toMatch(/Bold/)
+    expect(text.match(/\d+/g)).toEqual(['2', '130']) // the rank and the total, nothing else
+  })
+
+  it('fills one pip per rank', async () => {
+    await seed('courage', 130)
+    await renderStats()
+    expect(card('Courage').querySelectorAll('.pip.on')).toHaveLength(2)
+    expect(card('Courage').querySelectorAll('.pip')).toHaveLength(5)
+  })
+
+  it('shows Max at 1000', async () => {
+    await seed('charm', 1000)
+    await renderStats()
+    expect(card('Charm').textContent).toMatch(/Max/)
+    expect(card('Charm').textContent).not.toMatch(/Rank/)
+    expect(card('Charm').textContent).toMatch(/Radiant.*1000 pts/)
+    expect(card('Charm').querySelectorAll('.pip.on')).toHaveLength(5)
+  })
+
+  it('shows Graduated only when all four stats are maxed', async () => {
+    for (const stat of ['charm', 'courage', 'intelligence'] as const) await seed(stat, 1000)
+    await seed('proficiency', 999)
+    await renderStats()
+    expect(screen.queryByText('Graduated')).toBeNull()
+    cleanup()
+    await seed('proficiency', 1)
+    await renderStats()
+    expect(screen.getByText('Graduated')).toBeTruthy()
+  })
+
+  it('updates after a log and after a delete in Today', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await logInSheet(user, sheet, '25') // +3 Courage, +2 Charm
+    await user.click(within(sheet).getByRole('button', { name: 'Close' }))
+    await user.click(within(strip()).getByRole('button', { name: 'Stats' }))
+    await waitFor(() => expect(card('Courage').textContent).toMatch(/3 pts/))
+    expect(card('Charm').textContent).toMatch(/2 pts/)
+
+    await user.click(within(strip()).getByRole('button', { name: 'Today' }))
+    const again = await openSheet(user, 'Boxing')
+    await user.click(within(again).getByRole('button', { name: 'Delete' }))
+    await within(again).findByText(/no sessions yet today/i)
+    await user.click(within(again).getByRole('button', { name: 'Close' }))
+    await user.click(within(strip()).getByRole('button', { name: 'Stats' }))
+    await waitFor(() => expect(card('Courage').textContent).toMatch(/0 pts/))
   })
 })
 
