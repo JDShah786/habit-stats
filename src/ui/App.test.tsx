@@ -12,9 +12,25 @@ let dbCount = 0
 let db: HabitDB
 let store: Store
 
+// jsdom has no matchMedia. Tests run with Reduce Motion on, so screens change at once;
+// the shell tests turn it off to cover the animated wipe.
+let reduceMotion = true
+
 beforeEach(() => {
   db = openDb(`ui-${dbCount++}`)
   store = createStore(db, () => '2026-10-27')
+  reduceMotion = true
+  window.matchMedia = (query: string) =>
+    ({
+      matches: query.includes('reduce') && reduceMotion,
+      media: query,
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList
 })
 
 afterEach(async () => {
@@ -22,9 +38,22 @@ afterEach(async () => {
   await db.delete()
 })
 
-const renderApp = () => {
+// Tuesday 27 Oct 2026, 7:30 pm local time: matches the store's day.
+const NOW = new Date(2026, 9, 27, 19, 30)
+
+const renderOnMenu = () => {
   const user = userEvent.setup()
-  render(<App store={store} />)
+  render(<App store={store} now={() => NOW} />)
+  return user
+}
+
+const menu = () => screen.findByRole('navigation', { name: 'Menu' })
+const strip = () => screen.getByRole('navigation', { name: 'Sections' })
+
+// The app opens on the command menu; most tests start on Today, one tap away.
+const renderApp = async () => {
+  const user = renderOnMenu()
+  await user.click(within(await menu()).getByRole('button', { name: 'Today' }))
   return user
 }
 
@@ -44,25 +73,73 @@ const logInSheet = async (user: ReturnType<typeof userEvent.setup>, sheet: HTMLE
 }
 
 describe('app shell', () => {
-  it('opens on Today, with a tab bar for the four screens', async () => {
-    renderApp()
-    expect(await screen.findByRole('heading', { level: 1, name: 'Today' })).toBeTruthy()
-    const tabs = within(screen.getByRole('navigation', { name: 'Screens' }))
-    for (const name of ['Today', 'Stats', 'Library', 'My habits']) {
-      expect(tabs.getByRole('button', { name })).toBeTruthy()
-    }
+  it('opens on the command menu with the four sections, Today marked', async () => {
+    renderOnMenu()
+    const words = within(await menu()).getAllByRole('button')
+    expect(words.map((b) => b.textContent)).toEqual(['Today', 'Library', 'Stats', 'My habits'])
+    expect(words[0].getAttribute('aria-current')).toBe('true')
+    expect(screen.queryByRole('navigation', { name: 'Sections' })).toBeNull()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Today' })).toBeNull()
   })
 
-  it('switches screens from the tab bar', async () => {
-    const user = renderApp()
-    await user.click(within(await screen.findByRole('navigation', { name: 'Screens' })).getByRole('button', { name: 'Stats' }))
+  it("shows today's date, weekday and time of day", async () => {
+    renderOnMenu()
+    await menu()
+    const date = document.querySelector('time')!
+    expect(date.dateTime).toBe('2026-10-27')
+    expect(date.textContent).toMatch(/10\/27.*TUE.*EVENING/)
+  })
+
+  it('tapping a menu word opens that section', async () => {
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'Library' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy()
+    expect(screen.queryByRole('navigation', { name: 'Menu' })).toBeNull()
+    expect(within(strip()).getByRole('button', { name: 'Library' }).getAttribute('aria-current')).toBe('page')
+  })
+
+  it('the section strip switches sections, and only the current one can be reached', async () => {
+    const user = await renderApp()
+    await user.click(within(strip()).getByRole('button', { name: 'Stats' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Stats' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Today' })).toBeNull()
+    expect(within(strip()).getByRole('button', { name: 'Stats' }).getAttribute('aria-current')).toBe('page')
+    expect(within(strip()).getByRole('button', { name: 'Today' }).getAttribute('aria-current')).toBeNull()
+  })
+
+  it('MENU goes back to the command menu, with the last section marked', async () => {
+    const user = await renderApp()
+    await user.click(within(strip()).getByRole('button', { name: 'Stats' }))
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    const words = within(await menu())
+    expect(words.getByRole('button', { name: 'Stats' }).getAttribute('aria-current')).toBe('true')
+    expect(words.getByRole('button', { name: 'Today' }).getAttribute('aria-current')).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Sections' })).toBeNull()
+  })
+
+  it('with Reduce Motion off, the wipe still lands on the section and back', async () => {
+    reduceMotion = false
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'Stats' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Stats' }, { timeout: 2000 })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    expect(await screen.findByRole('navigation', { name: 'Menu' }, { timeout: 2000 })).toBeTruthy()
+  })
+
+  it('ignores a second menu tap while the wipe is running', async () => {
+    reduceMotion = false
+    const user = renderOnMenu()
+    const words = within(await menu())
+    await user.click(words.getByRole('button', { name: 'Stats' }))
+    await user.click(words.getByRole('button', { name: 'Library' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Stats' }, { timeout: 2000 })).toBeTruthy()
+    expect(screen.queryByRole('heading', { level: 1, name: 'Library' })).toBeNull()
   })
 })
 
 describe('Today', () => {
   it('shows an empty state that links to the Library', async () => {
-    const user = renderApp()
+    const user = await renderApp()
     expect(await screen.findByText(/no habits on your list yet/i)).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Go to Library' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeTruthy()
@@ -72,7 +149,7 @@ describe('Today', () => {
     await store.addToList('boxing', 'daily')
     await store.addToList('flashcards', 'anytime')
     await store.logSession('boxing', 25)
-    renderApp()
+    await renderApp()
     const daily = await screen.findByRole('region', { name: 'Daily' })
     const anytime = screen.getByRole('region', { name: 'Anytime' })
     expect(within(daily).getByRole('button', { name: /^Boxing/ }).textContent).toContain('25 min')
@@ -83,7 +160,7 @@ describe('Today', () => {
     await store.addToList('boxing', 'daily')
     await store.addToList('running', 'daily')
     await store.logSession('boxing', 1)
-    renderApp()
+    await renderApp()
     expect((await row('Boxing')).textContent).toMatch(/done/)
     expect((await row('Running')).textContent).not.toMatch(/done/)
   })
@@ -92,7 +169,7 @@ describe('Today', () => {
 describe('log sheet', () => {
   it('logs minutes, then shows them in the sheet, the row and the points', async () => {
     await store.addToList('boxing', 'daily')
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await logInSheet(user, sheet, '25')
     expect(await within(sheet).findByText('25 min')).toBeTruthy()
@@ -103,7 +180,7 @@ describe('log sheet', () => {
 
   it('quick buttons set the minutes', async () => {
     await store.addToList('boxing', 'daily')
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await user.click(within(sheet).getByRole('button', { name: '30' }))
     expect((within(sheet).getByLabelText('Minutes') as HTMLInputElement).value).toBe('30')
@@ -111,7 +188,7 @@ describe('log sheet', () => {
 
   it('blocks empty, zero and fractional minutes', async () => {
     await store.addToList('boxing', 'daily')
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     const input = within(sheet).getByLabelText('Minutes')
     const log = within(sheet).getByRole('button', { name: 'Log' }) as HTMLButtonElement
@@ -129,7 +206,7 @@ describe('log sheet', () => {
   it('shows the reason when storage rejects a log', async () => {
     await store.addToList('boxing', 'daily')
     await store.logSession('flashcards', 1000)
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await logInSheet(user, sheet, '441')
     expect((await within(sheet).findByRole('alert')).textContent).toMatch(/1440/)
@@ -140,7 +217,7 @@ describe('log sheet', () => {
     await store.logSession('boxing', 25)
     await store.logSession('boxing', 20)
     await store.logSession('flashcards', 10)
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     const list = within(sheet).getByRole('list', { name: "Today's sessions" })
     expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
@@ -160,7 +237,7 @@ describe('log sheet', () => {
   it('deletes a session', async () => {
     await store.addToList('boxing', 'daily')
     await store.logSession('boxing', 25)
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await user.click(within(sheet).getByRole('button', { name: 'Delete' }))
     expect(await within(sheet).findByText(/no sessions yet today/i)).toBeTruthy()
@@ -169,7 +246,7 @@ describe('log sheet', () => {
 
   it('closes with the Close button', async () => {
     await store.addToList('boxing', 'daily')
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await user.click(within(sheet).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -180,7 +257,7 @@ describe('rank banner (placeholder until step 5)', () => {
   it('shows a rank-up, and dismisses on tap', async () => {
     await seed('courage', 58)
     await store.addToList('boxing', 'daily')
-    const user = renderApp()
+    const user = await renderApp()
     await logInSheet(user, await openSheet(user, 'Boxing'), '25')
     const banner = await screen.findByRole('status')
     expect(banner.textContent).toMatch(/courage rank up/i)
@@ -192,7 +269,7 @@ describe('rank banner (placeholder until step 5)', () => {
   it('stays up after a later log with no rank-up, until dismissed', async () => {
     await seed('courage', 58)
     await store.addToList('boxing', 'daily')
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await logInSheet(user, sheet, '25')
     await screen.findByRole('status')
@@ -207,7 +284,7 @@ describe('rank banner (placeholder until step 5)', () => {
     await seed('intelligence', 1000)
     await seed('proficiency', 999)
     await store.addToList('calligraphy', 'daily')
-    const user = renderApp()
+    const user = await renderApp()
     await logInSheet(user, await openSheet(user, 'Calligraphy'), '10')
     expect((await screen.findByRole('status')).textContent).toMatch(/graduated/i)
   })
@@ -216,7 +293,7 @@ describe('rank banner (placeholder until step 5)', () => {
     await seed('courage', 58)
     await store.addToList('boxing', 'daily')
     await store.logSession('boxing', 25) // Courage 61
-    const user = renderApp()
+    const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await user.click(within(sheet).getByRole('button', { name: 'Delete' }))
     await within(sheet).findByText(/no sessions yet today/i)
