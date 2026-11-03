@@ -48,9 +48,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 /* Command menu */
 .tagline { position: absolute; left: 20px; top: 150px; font: 800 12px var(--f-display); letter-spacing: 0.2em; color: var(--muted); transform: rotate(-6deg); }
 .menu { position: absolute; right: -6px; top: 29%; transform: rotate(-10deg); transform-origin: right; display: grid; gap: 4px; justify-items: end; }
-.menu button { font-size: 42px; letter-spacing: -0.03em; line-height: 1.08; color: var(--ink); text-shadow: 4px 4px 0 var(--black); padding: 0 22px; white-space: nowrap; border-radius: 999px; }
-.menu button:nth-child(2) { margin-right: 26px; } .menu button:nth-child(3) { margin-right: 52px; } .menu button:nth-child(4) { margin-right: 78px; }
-.menu button.sel { background: linear-gradient(100deg, var(--g), var(--lime)); color: var(--black); text-shadow: none; box-shadow: 8px 8px 0 var(--black), 10px 10px 0 var(--ink); font-size: 50px; }
+/* Sizes and the staircase step shrink on narrow phones so the longest word (MY HABITS, selected) stays on screen. */
+.menu { --step: min(26px, 6vw); }
+.menu button { font-size: min(42px, 11vw); letter-spacing: -0.03em; line-height: 1.08; color: var(--ink); text-shadow: 4px 4px 0 var(--black); padding: 0 22px; white-space: nowrap; border-radius: 999px; }
+.menu button:nth-child(2) { margin-right: var(--step); } .menu button:nth-child(3) { margin-right: calc(var(--step) * 2); } .menu button:nth-child(4) { margin-right: calc(var(--step) * 3); }
+.menu button.sel { background: linear-gradient(100deg, var(--g), var(--lime)); color: var(--black); text-shadow: none; box-shadow: 8px 8px 0 var(--black), 10px 10px 0 var(--ink); font-size: min(50px, 12.5vw); }
 .menu .hint { font-size: 12px; font-style: normal; font-weight: 800; letter-spacing: 0.2em; color: var(--lime); margin-right: 30px; margin-top: 8px; font-family: var(--f-display); }
 .card { position: absolute; left: 16px; bottom: 24px; width: 236px; padding: 14px 16px; border-radius: 26px; background: var(--black); border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--g); }
 .card-tilt { position: absolute; left: 0; bottom: 0; transform: rotate(3deg); transform-origin: left bottom; }
@@ -58,23 +60,26 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .card p { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; margin-top: 6px; }
 .card p i, .row-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.5); flex: none; }
 .card p i.on { border: 0; background: radial-gradient(circle at 32% 30%, var(--ink) 0 14%, var(--lime) 24%, var(--g) 60%); box-shadow: 0 0 8px var(--g); }
+.card p span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card p em { margin-left: auto; font: 900 italic 14px var(--f-display); font-variant-numeric: tabular-nums; }
 
 /* Sections */
 .menu-btn { position: absolute; top: 22px; right: 16px; z-index: 4; padding: 7px 14px; border-radius: 999px; border: 2px solid var(--g); color: var(--g); font-size: 13px; letter-spacing: 0.08em; background: var(--black); box-shadow: 3px 3px 0 var(--g); }
 .tabs { position: absolute; left: -24px; right: -24px; top: 134px; height: 48px; background: var(--black); border-block: 3px solid var(--g); transform: rotate(-4deg); display: flex; align-items: center; justify-content: space-around; padding: 0 36px; z-index: 2; }
-.tabs button { position: relative; z-index: 1; font-size: 13px; letter-spacing: 0.03em; color: var(--muted); padding: 6px 9px; white-space: nowrap; }
+.tabs button { position: relative; z-index: 1; font-size: clamp(11px, 3.4vw, 13px); letter-spacing: 0.03em; color: var(--muted); padding: 6px 9px; white-space: nowrap; }
 .tabs button.on { color: var(--black); }
 .cursor { position: absolute; top: 6px; height: 30px; border-radius: 999px; background: linear-gradient(100deg, var(--g), var(--lime)); box-shadow: 3px 3px 0 var(--ink); }
 .panes { position: absolute; left: 0; right: 0; top: 196px; bottom: 0; overflow: hidden; }
 .track { display: flex; height: 100%; width: 400%; touch-action: pan-y; will-change: transform; }
 .pane { flex: 0 0 25%; height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 18px 18px 110px; touch-action: pan-y; scrollbar-width: none; }
 .pane::-webkit-scrollbar { display: none; }
-.tilt { transform: rotate(-4deg); transform-origin: left top; }
+/* Tilt each item on its own, never a whole list: a rotated tall list drifts sideways the further down it goes.
+   CSS `rotate` composes with the `transform` Motion writes, so items can still animate. */
+.tilt .label, .tilt .pill, .tilt .near, .tilt .row, .tilt .stat, .tilt .custom, .search, .chips, .mh-head { rotate: -4deg; }
 
 .label { display: inline-block; padding: 3px 12px; border-radius: 999px; border: 2px solid var(--g); color: var(--g); font-size: 13px; letter-spacing: 0.12em; }
 .group { margin-bottom: 26px; }
-.pill { position: relative; display: flex; align-items: center; gap: 12px; height: 58px; padding: 0 22px 0 16px; border-radius: 999px; margin-top: 14px; margin-left: var(--off, 0px); width: calc(100% - var(--off, 0px) - 24px);
+.pill { position: relative; display: flex; align-items: center; gap: 12px; height: 58px; padding: 0 22px 0 16px; border-radius: 999px; margin-top: 22px; margin-left: var(--off, 0px); width: calc(100% - var(--off, 0px) - 24px);
   background: var(--black); border: 2px solid var(--line); box-shadow: 6px 6px 0 color-mix(in srgb, var(--g) 35%, transparent); }
 .pill .fill { position: absolute; inset: -2px; border-radius: inherit; background: linear-gradient(100deg, var(--g), var(--lime)); transform-origin: left; opacity: 0; }
 .pill > :not(.fill) { position: relative; }
@@ -102,7 +107,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .chip { padding: 6px 12px; border-radius: 999px; border: 2px solid var(--g); color: var(--g); font-size: 13px; letter-spacing: 0.05em; }
 .chip.on { background: var(--g); color: var(--black); box-shadow: 3px 3px 0 var(--ink); }
-.lib { margin-top: 8px; }
+.lib { margin-top: 14px; }
 .row { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 10px 8px 18px; border-radius: 999px; background: var(--black); border: 2px solid rgb(255 255 255 / 0.45); margin-top: 10px; }
 .row .meta { flex: 1; min-width: 0; }
 .row .meta b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -128,7 +133,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .pts b { color: var(--ink); font-size: 15px; }
 
 /* My habits */
-.mh-head { display: flex; align-items: center; justify-content: space-between; }
+.mh-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+#mineList .row { margin-right: 6px; }
 .mh-head h2 { font-size: 26px; }
 .ghost-btn { padding: 7px 13px; border-radius: 999px; border: 2px solid var(--g); color: var(--g); font-size: 12px; letter-spacing: 0.08em; }
 .kind { font-size: 11px; letter-spacing: 0.08em; padding: 3px 9px; border-radius: 999px; background: var(--g); color: var(--black); }
@@ -157,6 +163,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .q.on { box-shadow: 0 0 0 3px var(--ink), 4px 4px 0 3px var(--black); }
 .err { margin-top: 10px; color: var(--warn); font-weight: 700; font-size: 14px; }
 .sess { margin-top: 16px; }
+#sessList { max-height: 128px; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; padding-right: 4px; }
 .sess h4 { font: 800 11px var(--f-display); letter-spacing: 0.2em; color: var(--muted); }
 .sess .none { margin-top: 6px; color: var(--muted); font-size: 14px; }
 .srow { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 6px 6px 14px; border-radius: 999px; border: 2px solid rgb(255 255 255 / 0.3); }
@@ -187,6 +194,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .rise { position: absolute; bottom: -50px; left: var(--l); width: var(--s); height: var(--s); border-radius: 50%; animation: rise var(--d) linear var(--dl) infinite; opacity: 0.7;
   background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 0.8), color-mix(in srgb, var(--g) 50%, transparent) 40%, transparent 72%); }
 @keyframes rise { to { transform: translateY(-120vh); } }
+.ru-rise { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .ru-shake { position: relative; width: 100%; }
 .ru-content { text-align: center; transform: rotate(-6deg); padding-inline: 16px; }
 .ru .seq { opacity: 0; }
@@ -197,11 +205,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .ru-old { display: inline-block; font-size: 64px; color: var(--muted); text-shadow: 4px 4px 0 var(--black); }
 .ru-arrow { display: inline-block; width: 0; height: 0; border-block: 16px solid transparent; border-left: 26px solid var(--ink); filter: drop-shadow(3px 3px 0 var(--black)); }
 .ru-new { display: inline-block; font-size: 150px; line-height: 0.85; color: var(--lime); text-shadow: 6px 6px 0 var(--black), 9px 9px 0 var(--ink); }
-.ru-title { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
+.ru-title { display: flex; flex-wrap: wrap; row-gap: 8px; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; }
 .ru-told { position: relative; display: inline-block; font-size: 18px; color: var(--muted); }
 .ru-told i { position: absolute; left: -4px; right: -4px; top: 50%; height: 3px; background: var(--warn); transform-origin: left; }
 .ru-tnew { display: inline-block; padding: 4px 16px; border-radius: 999px; background: linear-gradient(100deg, var(--g), var(--lime)); color: var(--black); font-size: 28px; box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink); }
-.ru-next { display: block; margin-top: 18px; font: 800 12px var(--f-display); letter-spacing: 0.2em; color: var(--muted); }
+.ru-next { display: inline-block; margin-top: 16px; padding: 5px 12px; border-radius: 999px; background: var(--black); font: 800 12px var(--f-display); letter-spacing: 0.2em; color: var(--ink); }
 .ru-tap { position: absolute; bottom: 40px; left: 0; right: 0; text-align: center; font: 800 12px var(--f-display); letter-spacing: 0.3em; color: var(--lime); }
 .ru-tap span { animation: blink 1.2s steps(2, start) infinite; }
 @keyframes blink { to { visibility: hidden; } }
@@ -284,7 +292,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
   <div class="ru" id="ru" hidden aria-live="assertive">
     <div class="ru-bg"></div>
     <div class="ru-stripes"><i></i><i></i><i></i></div>
-    <div id="ruRise"></div>
+    <div class="ru-rise" id="ruRise"></div>
     <div class="ru-flash" id="ruFlash"></div>
     <div class="ru-shake" id="ruShake"><div class="ru-exit" id="ruExit"><div class="ru-content">
       <span class="ru-label d seq" id="ruLabel">RANK UP!</span>
@@ -622,7 +630,7 @@ async function closeSheet() {
 $('backdrop').addEventListener('click', closeSheet)
 // Drag the sheet down to close it.
 $('sheet').addEventListener('pointerdown', (e) => {
-  if (e.target.closest('button,input')) return
+  if (e.target.closest('button,input,#sessList')) return
   sheetDrag = { y0: e.clientY, dy: 0 }; $('sheet').setPointerCapture(e.pointerId)
 })
 $('sheet').addEventListener('pointermove', (e) => {
@@ -688,11 +696,11 @@ async function celebrateLog(id, prevMin, before, after) {
 let ruReady = false
 async function rankUp(stat, from, to) {
   const T = TITLES[stat], name = stat.toUpperCase()
-  $('ruStat').textContent = name; $('ruStat').style.fontSize = Math.min(72, 340 / (name.length * 0.74)) + 'px'
+  $('ruStat').textContent = name; $('ruStat').style.fontSize = Math.min(72, (stage.clientWidth - 60) / (name.length * 0.78)) + 'px'
   $('ruOld').textContent = from; $('ruNew').textContent = to
   $('ruTOld').firstChild.textContent = T[from - 1].toUpperCase(); $('ruTNew').textContent = T[to - 1].toUpperCase()
   $('ruLabel').textContent = to === 5 ? 'MAX RANK!' : 'RANK UP!'
-  $('ruNext').textContent = to < 5 ? `NEXT · ${T[to].toUpperCase()} AT ${RANKS[to]}` : 'MAXED · THIS STAT STOPS COUNTING'
+  $('ruNext').textContent = to < 5 ? `NEXT · ${T[to].toUpperCase()} AT ${RANKS[to]}` : 'MAXED · STOPS COUNTING'
   const ru = $('ru'), seq = ru.querySelectorAll('.seq'), stripes = ru.querySelectorAll('.ru-stripes i')
   ru.hidden = false; ruReady = false
   animate($('ruExit'), { x: 0, opacity: 1 }, { duration: 0 })
@@ -824,7 +832,7 @@ $('settingsBtn').addEventListener('click', () => toast('Export and import will l
 function updateMenuCard() {
   const daily = list.filter((h) => h.kind === 'daily')
   $('hint').textContent = `${daily.filter((h) => minutesOf(h.id) > 0).length} OF ${daily.length} DAILY DONE`
-  $('cardRows').innerHTML = list.slice(0, 3).map((h) => { const m = minutesOf(h.id); return `<p><i class="${m > 0 ? 'on' : ''}"></i>${esc(byId[h.id].name)}<em>${m}m</em></p>` }).join('') || '<p>Nothing on your list yet.</p>'
+  $('cardRows').innerHTML = list.slice(0, 3).map((h) => { const m = minutesOf(h.id); return `<p><i class="${m > 0 ? 'on' : ''}"></i><span>${esc(byId[h.id].name)}</span><em>${m}m</em></p>` }).join('') || '<p>Nothing on your list yet.</p>'
 }
 
 // ---------- Mockup controls ----------
