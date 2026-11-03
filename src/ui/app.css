@@ -803,6 +803,123 @@ section + section h2 {
   color: var(--g);
 }
 
+/* Stats */
+
+.grad {
+  display: inline-block;
+  margin: 4px 0 4px;
+  padding: 5px 16px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, var(--g), var(--lime));
+  color: var(--black);
+  box-shadow: 4px 4px 0 var(--black), 6px 6px 0 var(--ink);
+  font: 900 italic 18px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  rotate: -4deg;
+}
+
+.stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stat {
+  position: relative;
+  margin: 16px 0 0 var(--off, 0px);
+  width: calc(100% - var(--off, 0px) - 14px);
+  padding: 12px 16px 14px;
+  border-radius: 28px;
+  background: var(--black);
+  border: 2px solid var(--line);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--g) 35%, transparent);
+  rotate: -4deg;
+}
+
+.stat .top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  rotate: none;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.stat .rk {
+  margin-left: auto;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--black);
+  box-shadow: 3px 3px 0 var(--ink);
+  font: 900 italic 13px var(--display);
+  text-transform: uppercase;
+}
+
+.stat .rk.max {
+  background: var(--ink);
+  box-shadow: 3px 3px 0 var(--g);
+}
+
+.ttl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.stat .ttl {
+  font: 900 italic 14px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--g);
+}
+
+.pips {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+
+.pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.4);
+}
+
+.pip.on {
+  border: 0;
+  background: radial-gradient(circle at 32% 30%, var(--ink) 0 18%, var(--lime) 30%, var(--g) 70%);
+}
+
+.stat .bar {
+  margin-top: 12px;
+}
+
+.pts {
+  margin-top: 6px;
+  font: 800 12px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pts b {
+  font-size: 15px;
+  color: var(--ink);
+}
+
 /* Log sheet (portal into <body>) */
 
 .sheet-backdrop {

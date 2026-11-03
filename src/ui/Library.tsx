@@ -18,14 +18,14 @@ interface Props {
   // Kept by the app, so the last chip survives a trip to the menu.
   category: Category
   onCategory: (category: Category) => void
-  // Changes whenever your list changes; reloads which habits are on it.
-  listVersion: number
-  onListChange: () => void
+  // Changes whenever your data changes; reloads which habits are on your list.
+  dataVersion: number
+  onDataChange: () => void
 }
 
 const KIND_LABELS: Record<HabitKind, string> = { daily: 'Daily', anytime: 'Anytime' }
 
-export function Library({ store, active, category, onCategory, listVersion, onListChange }: Props) {
+export function Library({ store, active, category, onCategory, dataVersion, onDataChange }: Props) {
   const reduced = usePrefersReducedMotion()
   const [onList, setOnList] = useState<Map<string, HabitKind> | null>(null)
   const [query, setQuery] = useState('')
@@ -45,7 +45,7 @@ export function Library({ store, active, category, onCategory, listVersion, onLi
     return () => {
       showing = false
     }
-  }, [store, listVersion])
+  }, [store, dataVersion])
 
   if (!onList) return <h1>Library</h1>
 
@@ -56,7 +56,7 @@ export function Library({ store, active, category, onCategory, listVersion, onLi
     if (!reduced) burst(tapPoint(e), 14, 80)
     await store.addToList(habitId, kind)
     setChoosing(null)
-    onListChange()
+    onDataChange()
   }
 
   return (

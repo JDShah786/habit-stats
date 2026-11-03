@@ -16,8 +16,10 @@ import { nearestRank, statName } from './todayView'
 
 interface Props {
   store: Store
-  // Changes whenever your list changes elsewhere (e.g. the Library); reloads the list.
-  listVersion: number
+  // Changes whenever your data changes (e.g. the Library adds a habit); reloads the list.
+  dataVersion: number
+  // Tells the app a log, edit or delete changed your data.
+  onDataChange: () => void
   onEvents: (events: RankEvent[]) => void
   onGoToLibrary: () => void
 }
@@ -27,9 +29,9 @@ const SECTIONS: [HabitKind, string][] = [
   ['anytime', 'Anytime'],
 ]
 
-export function Today({ store, listVersion, onEvents, onGoToLibrary }: Props) {
+export function Today({ store, dataVersion, onDataChange, onEvents, onGoToLibrary }: Props) {
   const reduced = usePrefersReducedMotion()
-  const [data, reload] = useTodayData(store, listVersion)
+  const [data, reload] = useTodayData(store, dataVersion)
   const [openId, setOpenId] = useState<string | null>(null)
 
   if (!data) return <h1>Today</h1>
@@ -109,7 +111,10 @@ export function Today({ store, listVersion, onEvents, onGoToLibrary }: Props) {
             store={store}
             reduced={reduced}
             onEvents={onEvents}
-            onChange={reload}
+            onChange={async () => {
+              await reload()
+              onDataChange()
+            }}
             onClose={() => setOpenId(null)}
           />,
           document.body,
@@ -132,9 +137,8 @@ function NextRank({ totals }: { totals: StatPoints }) {
     <section className="near" aria-label="Next rank">
       <div className="top">
         <b>{statName(next.stat)}</b>
-        <span className="up">
-          {next.pointsLeft} to Rank {next.toRank}
-        </span>
+        {/* Like the games: which rank is next, never how many points it takes. */}
+        <span className="up">Next: Rank {next.toRank}</span>
       </div>
       <div className="bar" aria-hidden="true">
         <motion.i className="fill" initial={{ scaleX: 0 }} animate={{ scaleX: earned / needed }} transition={SOFT} />

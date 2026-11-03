@@ -13,8 +13,8 @@ export interface TodayData {
   totals: StatPoints
 }
 
-// Loads on open, and again whenever `listVersion` changes.
-export function useTodayData(store: Store, listVersion = 0) {
+// Loads on open, and again whenever `dataVersion` changes.
+export function useTodayData(store: Store, dataVersion = 0) {
   const [data, setData] = useState<TodayData | null>(null)
 
   const load = useCallback(async (): Promise<TodayData> => {
@@ -36,7 +36,7 @@ export function useTodayData(store: Store, listVersion = 0) {
     return () => {
       showing = false
     }
-  }, [load, listVersion])
+  }, [load, dataVersion])
 
   return [data, reload] as const
 }

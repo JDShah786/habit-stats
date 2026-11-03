@@ -14,6 +14,7 @@ import { SECTIONS } from './motionKit'
 import { RankBanner } from './RankBanner'
 import { usePrefersReducedMotion } from './reducedMotion'
 import { Sections } from './Sections'
+import { Stats } from './Stats'
 import { Today } from './Today'
 import { Wipe } from './Wipe'
 
@@ -37,8 +38,9 @@ export function App({ store, now = () => new Date() }: Props) {
   // True from a menu/MENU tap until the screen has swapped: taps in between are ignored.
   const busy = useRef(false)
   const [category, setCategory] = useState<Category>('fitness') // Library's last chip, while the app is open
-  // Bumped when the Library changes your list, so the other sections reload it.
-  const [listVersion, listChanged] = useReducer((n: number) => n + 1, 0)
+  // Bumped when a section changes your data (adding, logging, editing, deleting), so the
+  // others reload it. All four sections stay loaded for swiping.
+  const [dataVersion, dataChanged] = useReducer((n: number) => n + 1, 0)
   const [events, setEvents] = useState<RankEvent[]>([])
   // A banner stays until dismissed; only a new announcement replaces it.
   const announce = (next: RankEvent[]) => {
@@ -75,7 +77,7 @@ export function App({ store, now = () => new Date() }: Props) {
             onIndex={setIndex}
             onMenu={toMenu}
             renderSection={(i) => {
-              if (i === 0) return <Today store={store} listVersion={listVersion} onEvents={announce} onGoToLibrary={() => setIndex(1)} />
+              if (i === 0) return <Today store={store} dataVersion={dataVersion} onDataChange={dataChanged} onEvents={announce} onGoToLibrary={() => setIndex(1)} />
               if (i === 1)
                 return (
                   <Library
@@ -83,10 +85,11 @@ export function App({ store, now = () => new Date() }: Props) {
                     active={index === 1}
                     category={category}
                     onCategory={setCategory}
-                    listVersion={listVersion}
-                    onListChange={listChanged}
+                    dataVersion={dataVersion}
+                    onDataChange={dataChanged}
                   />
                 )
+              if (i === 2) return <Stats store={store} active={index === 2} dataVersion={dataVersion} />
               return <ComingSoon title={SECTIONS[i]} />
             }}
           />
