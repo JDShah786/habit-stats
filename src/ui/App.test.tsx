@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Stat } from '../engine/stats'
@@ -156,6 +156,57 @@ describe('Today', () => {
     expect(within(anytime).getByRole('button', { name: /^Flashcards/ }).textContent).toContain('0 min')
   })
 
+  it('lights up any habit with time today, but only daily habits are done', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.addToList('running', 'daily')
+    await store.addToList('flashcards', 'anytime')
+    await store.logSession('boxing', 1)
+    await store.logSession('flashcards', 5)
+    await renderApp()
+    const boxing = await row('Boxing')
+    const flashcards = await row('Flashcards')
+    const running = await row('Running')
+    expect(boxing.classList.contains('lit')).toBe(true)
+    expect(boxing.textContent).toMatch(/done/)
+    expect(flashcards.classList.contains('lit')).toBe(true)
+    expect(flashcards.textContent).not.toMatch(/done/)
+    expect(running.classList.contains('lit')).toBe(false)
+  })
+
+  it('shows the stat closest to its next rank, even with an empty list', async () => {
+    await renderApp()
+    const next = await screen.findByRole('region', { name: 'Next rank' })
+    expect(next.textContent).toMatch(/charm/i)
+    expect(next.textContent).toMatch(/60 to rank 2/i)
+  })
+
+  it('updates the next-rank bar after a log', async () => {
+    await seed('courage', 50)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    expect((await screen.findByRole('region', { name: 'Next rank' })).textContent).toMatch(/courage.*10 to rank 2/i)
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25') // +3 Courage
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Next rank' }).textContent).toMatch(/courage.*7 to rank 2/i))
+  })
+
+  it('floats the points each stat gained after a log', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+    expect(await screen.findByText('+3 Courage')).toBeTruthy()
+    expect(screen.getByText('+2 Charm')).toBeTruthy()
+  })
+
+  it('floats no points for edits or deletes', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 25)
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await user.click(within(sheet).getByRole('button', { name: 'Delete' }))
+    await within(sheet).findByText(/no sessions yet today/i)
+    expect(screen.queryByText(/^\+\d+ /)).toBeNull()
+  })
+
   it('ticks a daily habit once it has any session today', async () => {
     await store.addToList('boxing', 'daily')
     await store.addToList('running', 'daily')
@@ -176,6 +227,33 @@ describe('log sheet', () => {
     await user.click(within(sheet).getByRole('button', { name: 'Close' }))
     expect((await row('Boxing')).textContent).toContain('25 min')
     expect(await store.totals()).toMatchObject({ courage: 3, charm: 2 })
+  })
+
+  it("shows the habit's stat weights", async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    expect(within(sheet).getByText('Courage 70')).toBeTruthy()
+    expect(within(sheet).getByText('Charm 30')).toBeTruthy()
+  })
+
+  it('CUSTOM clears the minutes box and puts the cursor in it', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    const box = within(sheet).getByLabelText('Minutes') as HTMLInputElement
+    await user.click(within(sheet).getByRole('button', { name: '30' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Custom' }))
+    expect(box.value).toBe('')
+    expect(document.activeElement).toBe(box)
+  })
+
+  it('closes when tapping outside the sheet', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await openSheet(user, 'Boxing')
+    await user.click(document.querySelector('.sheet-backdrop')!)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('quick buttons set the minutes', async () => {
@@ -250,6 +328,51 @@ describe('log sheet', () => {
     const sheet = await openSheet(user, 'Boxing')
     await user.click(within(sheet).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+})
+
+describe("menu: today's list card", () => {
+  const card = () => screen.findByRole('button', { name: /today's list/i })
+
+  it('lists the first 3 habits in Today order, with "+N more"', async () => {
+    for (const id of ['guitar', 'flashcards', 'chess']) await store.addToList(id, 'anytime')
+    for (const id of ['running', 'boxing']) await store.addToList(id, 'daily')
+    await store.logSession('boxing', 25)
+    renderOnMenu()
+    await waitFor(async () => expect((await card()).textContent).toMatch(/Boxing.*25.*Running.*Chess.*\+2 more/))
+    expect((await card()).textContent).not.toMatch(/Flashcards|Guitar/)
+  })
+
+  it('counts daily habits done, and hides the count with no daily habits', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.addToList('running', 'daily')
+    await store.logSession('boxing', 5)
+    renderOnMenu()
+    expect(await screen.findByText(/1 of 2 daily done/i)).toBeTruthy()
+    cleanup()
+    await store.removeFromList('boxing')
+    await store.removeFromList('running')
+    await store.addToList('flashcards', 'anytime')
+    renderOnMenu()
+    await waitFor(async () => expect((await card()).textContent).toMatch(/Flashcards/))
+    expect(screen.queryByText(/daily done/i)).toBeNull()
+  })
+
+  it('says the list is empty, and opens Today when tapped', async () => {
+    const user = renderOnMenu()
+    await waitFor(async () => expect((await card()).textContent).toMatch(/nothing on your list yet/i))
+    await user.click(await card())
+    expect(await screen.findByRole('heading', { level: 1, name: 'Today' })).toBeTruthy()
+  })
+
+  it('shows minutes logged in Today after going back to the menu', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await logInSheet(user, sheet, '25')
+    await user.click(within(sheet).getByRole('button', { name: 'Close' }))
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    await waitFor(async () => expect((await card()).textContent).toMatch(/Boxing.*25/))
   })
 })
 
