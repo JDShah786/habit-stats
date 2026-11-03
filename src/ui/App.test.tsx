@@ -564,11 +564,13 @@ describe('Stats', () => {
     for (const stat of ['charm', 'courage', 'intelligence'] as const) await seed(stat, 1000)
     await seed('proficiency', 999)
     await renderStats()
-    expect(screen.queryByText('Graduated')).toBeNull()
+    const statsPane = () => within(screen.getByRole('region', { name: 'Stats' }))
+    expect(statsPane().queryByText('Graduated')).toBeNull()
     cleanup()
-    await seed('proficiency', 1)
+    // The last point, on another day so it doesn't clash with the 999 row.
+    await db.awards.add({ habitId: 'boxing', date: '2026-10-25', stat: 'proficiency', points: 1 })
     await renderStats()
-    expect(screen.getByText('Graduated')).toBeTruthy()
+    expect(statsPane().getByText('Graduated')).toBeTruthy()
   })
 
   it('updates after a log and after a delete in Today', async () => {
