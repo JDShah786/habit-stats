@@ -11,8 +11,9 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@fontsource/anton": "^5.3.0",
+    "@fontsource/montserrat": "^5.3.0",
     "dexie": "^4.4.7",
+    "motion": "^14.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

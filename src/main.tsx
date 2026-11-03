@@ -1,4 +1,8 @@
-import '@fontsource/anton'
+// Montserrat: only the weights the design uses (self-hosted, OFL).
+import '@fontsource/montserrat/700.css'
+import '@fontsource/montserrat/800.css'
+import '@fontsource/montserrat/800-italic.css'
+import '@fontsource/montserrat/900-italic.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { localDay } from './engine/scoring'

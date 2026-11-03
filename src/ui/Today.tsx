@@ -2,6 +2,7 @@
 // edit or delete today's sessions.
 
 import { useCallback, useEffect, useId, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { RankEvent } from '../engine/stats'
 import type { Habit } from '../library/library'
 import type { ActiveHabitRow, HabitKind, SessionRow } from '../storage/db'
@@ -96,16 +97,19 @@ export function Today({ store, onEvents, onGoToLibrary }: Props) {
         )
       })}
 
-      {open && (
-        <LogSheet
-          habit={open}
-          sessions={sessionsOf(open.id)}
-          store={store}
-          onEvents={onEvents}
-          onChange={reload}
-          onClose={() => setOpenId(null)}
-        />
-      )}
+      {/* Rendered into <body>: inside the moving swipe track, position: fixed would follow the track. */}
+      {open &&
+        createPortal(
+          <LogSheet
+            habit={open}
+            sessions={sessionsOf(open.id)}
+            store={store}
+            onEvents={onEvents}
+            onChange={reload}
+            onClose={() => setOpenId(null)}
+          />,
+          document.body,
+        )}
     </>
   )
 }
