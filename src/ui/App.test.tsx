@@ -846,40 +846,133 @@ describe('My habits', () => {
   })
 })
 
-describe('rank banner (placeholder until step 5)', () => {
-  it('shows a rank-up, and dismisses on tap', async () => {
-    await seed('courage', 58)
-    await store.addToList('boxing', 'daily')
-    const user = await renderApp()
-    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
-    const banner = await screen.findByRole('status')
-    expect(banner.textContent).toMatch(/courage rank up/i)
-    expect(banner.textContent).toMatch(/steady/i)
-    await user.click(within(banner).getByRole('button', { name: 'Dismiss' }))
-    expect(screen.queryByRole('status')).toBeNull()
-  })
+describe('rank-up and graduation', () => {
+  type User = ReturnType<typeof userEvent.setup>
+  const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+  // The full-screen moment. It waits ~0.95 s after the change (0.4 s with Reduce Motion).
+  const moment = (name: 'Rank up' | 'Graduated') => screen.findByRole('dialog', { name }, { timeout: 3000 })
+  const continueIn = (dialog: HTMLElement) => within(dialog).getByRole('button', { name: /continue/i }) as HTMLButtonElement
+  // Continue is disabled until the moment can be tapped away.
+  const tapAway = async (user: User, dialog: HTMLElement) => {
+    await waitFor(() => expect(continueIn(dialog).disabled).toBe(false), { timeout: 2000 })
+    await user.click(continueIn(dialog))
+  }
+  const gone = (name: 'Rank up' | 'Graduated') =>
+    waitFor(() => expect(screen.queryByRole('dialog', { name })).toBeNull(), { timeout: 2000 })
+  // Sparks, shockwave rings and bubbles are decorative elements added to <body>.
+  const clearFx = () => document.querySelectorAll('.pop, .spark, .shock').forEach((el) => el.remove())
+  // Courage and Intelligence maxed; Proficiency one point short; Charm maxed unless given.
+  const almostGraduated = async (charm = 1000) => {
+    await seed('charm', charm)
+    await seed('courage', 1000)
+    await seed('intelligence', 1000)
+    await seed('proficiency', 999)
+  }
 
-  it('stays up after a later log with no rank-up, until dismissed', async () => {
+  it('plays after the floating points, shows the stat, old → new rank and title, and no next-rank info', async () => {
     await seed('courage', 58)
     await store.addToList('boxing', 'daily')
     const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
-    await logInSheet(user, sheet, '25')
-    await screen.findByRole('status')
-    await logInSheet(user, sheet, '20')
-    await within(sheet).findByText('20 min')
-    expect(screen.getByRole('status').textContent).toMatch(/courage rank up/i)
+    await logInSheet(user, sheet, '25') // Courage 58 → 61: rank 1 → 2
+    await within(sheet).findByText(/\+3 Courage/)
+    expect(screen.queryByRole('dialog', { name: 'Rank up' })).toBeNull()
+
+    const up = await moment('Rank up')
+    expect(up.textContent).toMatch(/rank up!/i)
+    expect(up.textContent).toMatch(/courage/i)
+    expect(within(up).getByText('1')).toBeTruthy()
+    expect(within(up).getByText('2')).toBeTruthy()
+    expect(up.textContent).toMatch(/timid/i)
+    expect(up.textContent).toMatch(/steady/i)
+    // Like the games: no threshold, points or next title.
+    expect(up.textContent).not.toMatch(/next|bold|200|pts/i)
   })
 
-  it('shows graduation when the last stat reaches 1000', async () => {
-    await seed('charm', 1000)
-    await seed('courage', 1000)
-    await seed('intelligence', 1000)
-    await seed('proficiency', 999)
+  it('Continue taps it away, back to the log sheet', async () => {
+    await seed('courage', 58)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+    await tapAway(user, await moment('Rank up'))
+    await gone('Rank up')
+    expect(screen.getByRole('dialog', { name: 'Boxing' })).toBeTruthy()
+  })
+
+  it('a tap anywhere on it, or Escape, also taps it away', async () => {
+    await seed('courage', 58)
+    await seed('charm', 59)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await logInSheet(user, sheet, '25') // Courage and Charm both rank up: two moments
+    const first = await moment('Rank up')
+    await waitFor(() => expect(continueIn(first).disabled).toBe(false), { timeout: 2000 })
+    await user.click(first)
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Rank up' }).textContent).toMatch(/courage/i), { timeout: 2000 })
+    const second = screen.getByRole('dialog', { name: 'Rank up' })
+    await waitFor(() => expect(continueIn(second).disabled).toBe(false), { timeout: 2000 })
+    await user.keyboard('{Escape}')
+    await gone('Rank up')
+  })
+
+  it('a max rank-up says so', async () => {
+    await seed('courage', 999)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '5') // Courage hits 1000: rank 4 → 5
+    const up = await moment('Rank up')
+    expect(up.textContent).toMatch(/max rank!/i)
+    expect(up.textContent).toMatch(/fearless/i)
+    expect(up.textContent).toMatch(/unshakable/i)
+    expect(up.textContent).toMatch(/maxed · stops counting/i)
+  })
+
+  it('graduation shows GRADUATED!, all four stats at MAX, GOOD JOB! and the message', async () => {
+    await almostGraduated()
     await store.addToList('calligraphy', 'daily')
     const user = await renderApp()
     await logInSheet(user, await openSheet(user, 'Calligraphy'), '10')
-    expect((await screen.findByRole('status')).textContent).toMatch(/graduated/i)
+    await tapAway(user, await moment('Rank up')) // Proficiency's max rank-up comes first
+    const grad = await moment('Graduated')
+    expect(grad.textContent).toMatch(/graduated!/i)
+    for (const title of ['Radiant', 'Unshakable', 'Genius', 'Master']) {
+      expect(grad.textContent).toMatch(new RegExp(`max · ${title}`, 'i'))
+    }
+    expect(grad.textContent).toMatch(/good job!/i)
+    expect(grad.textContent).toMatch(/these habits are part of you now\./i)
+  })
+
+  it('several events play one at a time: rank-ups in stat order, graduation last', async () => {
+    await almostGraduated(999) // Charm one point short too
+    await store.addToList('cooking', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Cooking'), '10') // Proficiency and Charm both reach 1000
+    const first = await moment('Rank up')
+    expect(first.textContent).toMatch(/charm/i)
+    await tapAway(user, first)
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Rank up' }).textContent).toMatch(/proficiency/i), { timeout: 2000 })
+    await tapAway(user, screen.getByRole('dialog', { name: 'Rank up' }))
+    await tapAway(user, await moment('Graduated'))
+    await gone('Graduated')
+    expect(screen.queryByRole('dialog', { name: 'Rank up' })).toBeNull()
+  })
+
+  it('an edit that crosses a threshold plays the rank-up too', async () => {
+    await seed('courage', 57)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await logInSheet(user, sheet, '5') // Courage 57 → 59: no rank-up
+    await within(sheet).findByText('5 min')
+    await sleep(700)
+    expect(screen.queryByRole('dialog', { name: 'Rank up' })).toBeNull()
+    await user.click(within(sheet).getByRole('button', { name: 'Edit' }))
+    const box = within(sheet).getByLabelText('Edit minutes')
+    await user.clear(box)
+    await user.type(box, '25')
+    await user.click(within(sheet).getByRole('button', { name: 'Save' })) // Courage → 60: rank 1 → 2
+    expect((await moment('Rank up')).textContent).toMatch(/steady/i)
   })
 
   it('stays silent on a rank-down', async () => {
@@ -890,6 +983,55 @@ describe('rank banner (placeholder until step 5)', () => {
     const sheet = await openSheet(user, 'Boxing')
     await user.click(within(sheet).getByRole('button', { name: 'Delete' }))
     await within(sheet).findByText(/no sessions yet today/i)
-    expect(screen.queryByRole('status')).toBeNull()
+    await sleep(700)
+    expect(screen.queryByRole('dialog', { name: 'Rank up' })).toBeNull()
+  })
+
+  it('with Reduce Motion: no impact sparks or shockwave', async () => {
+    clearFx()
+    await almostGraduated()
+    await store.addToList('calligraphy', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Calligraphy'), '10')
+    await tapAway(user, await moment('Rank up'))
+    await moment('Graduated')
+    await sleep(600)
+    expect(document.querySelectorAll('.spark, .shock')).toHaveLength(0)
+  })
+
+  describe('with Reduce Motion off', () => {
+    it('a rank-up can be tapped away only after 0.7 s', { timeout: 10_000 }, async () => {
+      reduceMotion = false
+      await seed('courage', 58)
+      await store.addToList('boxing', 'daily')
+      const user = await renderApp()
+      await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+      const up = await moment('Rank up')
+      expect(continueIn(up).disabled).toBe(true)
+      await user.click(up)
+      expect(screen.getByRole('dialog', { name: 'Rank up' })).toBeTruthy()
+      await waitFor(() => expect(continueIn(up).disabled).toBe(false), { timeout: 1200 })
+      await user.click(continueIn(up))
+      await gone('Rank up')
+    })
+
+    it('graduation lands with sparks and a shockwave, and can be tapped away only after 1 s', { timeout: 10_000 }, async () => {
+      reduceMotion = false
+      clearFx()
+      await almostGraduated()
+      await store.addToList('calligraphy', 'daily')
+      const user = await renderApp()
+      await logInSheet(user, await openSheet(user, 'Calligraphy'), '10')
+      await tapAway(user, await moment('Rank up'))
+      const grad = await moment('Graduated')
+      await waitFor(() => expect(document.querySelector('.spark')).not.toBeNull(), { timeout: 1500 })
+      expect(document.querySelector('.shock')).not.toBeNull()
+      // A rank-up would be ready by now; graduation waits the full second.
+      await sleep(250)
+      expect(continueIn(grad).disabled).toBe(true)
+      await waitFor(() => expect(continueIn(grad).disabled).toBe(false), { timeout: 1500 })
+      await user.click(continueIn(grad))
+      await gone('Graduated')
+    })
   })
 })
