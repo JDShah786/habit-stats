@@ -12,7 +12,7 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 
 ## Notes for later steps
 
-- Step 4/5: Lottie player library not chosen yet. Needs Hamid's approval before any Lottie code. Claude's recommendation: lottie-web light build (MIT, ~47 KB gzipped, bundles in so it works offline; skips "expressions", so check each file). Decide when a mockup needs a specific animation.
+- Lottie: not used in step 5 (all Motion). If a later set piece needs it, the player still needs Hamid's approval. Claude's recommendation then: lottie-web light build (MIT, ~47 KB gzipped, bundles in so it works offline; skips "expressions", so check each file).
 - Library goal (Hamid): ship the most common habits in the world, so custom habits are rarely needed. Grow habits.json over time.
 
 ## Decisions log
@@ -92,3 +92,10 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-11-03 | 4 | Tapping a row's DAILY/ANYTIME tag switches its kind and keeps addedOn (store.setKind). | Switching isn't re-adding. | → in SPEC |
 | 2026-11-03 | 4 | Remove slides the row away and shows "Removed. Its history stays." with UNDO for 5 s. Only the latest remove can be undone; the toast also goes on another remove or when leaving My habits. Undo puts the row back exactly (same addedOn and kind). | Mistakes are cheap to fix; history is never touched either way. | → in SPEC |
 | 2026-11-03 | 4 | No SETTINGS button on My habits until step 6. | No dead buttons. | → in SPEC |
+| 2026-11-04 | 5 | Rank-up drops the "NEXT · title AT points" line from the prototype. A max rank-up keeps "MAXED · STOPS COUNTING". | Same rule as Stats: never show what the next rank takes. | No |
+| 2026-11-04 | 5 | Several events from one change play one screen each: rank-ups in stat order, graduation last. Each is tapped away on its own. | Every rank-up gets its moment; graduation is the finale. | No |
+| 2026-11-04 | 5 | No Lottie in step 5; everything is Motion. | The approved prototype is all Motion, so no new library is needed. | No |
+| 2026-11-04 | 5 | An edit that crosses a threshold plays the full rank-up (or graduation) too. Floating points stay log-only. | Rule 8: the animation plays the moment a threshold is crossed. | No |
+| 2026-11-04 | 5 | Graduation (prototype approved): GRADUATED! lands first as the biggest thing on screen, from 4x, with impact frames (negative, hot, negative; ~70 ms each; at most 2 bright flashes), glowing sparks, a shockwave ring, a bubble burst and a strong shake. Then the four stats slide in as MAX rows with their titles, then a GOOD JOB! pill and "These habits are part of you now." About 2.4 s; can be tapped away after 1 s. Reduce Motion: no impact frames, sparks or shake; it fades in. | Hamid's review: one clear hero, more pronounced, impact frames and a boom. Flash limit keeps it safe (WCAG 2.3.1). | No |
+| 2026-11-04 | 5 | Bubble bursts draw above the rank-up and graduation screens. | They were hidden behind the overlay in the prototype. | No |
+| 2026-11-04 | 5 | The menu wipe starts right after the tap's bubble pop: bars start just off-screen with a fast-start ease (~50 ms to show, was ~135 ms). | Hamid noticed a gap between the pop and the slide. | No |
