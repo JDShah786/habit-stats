@@ -846,11 +846,149 @@ describe('My habits', () => {
   })
 })
 
+describe('points chart', () => {
+  const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+  const chart = () => screen.findByRole('status', { name: 'Points earned' })
+  const chartGone = () =>
+    waitFor(() => expect(screen.queryByRole('status', { name: 'Points earned' })).toBeNull(), { timeout: 4000 })
+  // What a stat's node shows (its rank, or MAX) and its "+N" tally.
+  const nodeRank = (el: HTMLElement, stat: string) => el.querySelector(`[data-stat="${stat}"] .pc-rank`)!.textContent
+  const tally = (el: HTMLElement, stat: string) => el.querySelector(`.pc-tally[data-stat="${stat}"]`)!.textContent
+  // Counts the beads that fly (decorative <i class="pc-bead"> added to <body>).
+  const countBeads = () => {
+    const seen = { beads: 0 }
+    const watch = new MutationObserver((changes) =>
+      changes.forEach((c) => c.addedNodes.forEach((n) => (n as Element).classList?.contains('pc-bead') && seen.beads++)),
+    )
+    watch.observe(document.body, { childList: true })
+    return { seen, stop: () => watch.disconnect() }
+  }
+
+  it('comes up after LOG with the habit and the minutes just logged, and the points per stat', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 5) // earlier today (2 pts: Courage 2, Charm 1); the caption shows only this log
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '15') // day 20 min, 4 pts: Courage 3, Charm 2, so +1 each
+    const shown = await chart()
+    expect(shown.textContent).toMatch(/boxing · 15 min/i)
+    expect(within(shown).getByText('+1 Courage')).toBeTruthy()
+    expect(within(shown).getByText('+1 Charm')).toBeTruthy()
+  })
+
+  it("shows each stat's tally and its node's rank, ranking up when a threshold is crossed", async () => {
+    await seed('courage', 58)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25') // Courage 58 → 61, Charm 0 → 2
+    const shown = await chart()
+    // With Reduce Motion the chart shows its final state at once.
+    expect(tally(shown, 'courage')).toBe('+3')
+    expect(tally(shown, 'charm')).toBe('+2')
+    expect(tally(shown, 'intelligence')).toBe('')
+    expect(nodeRank(shown, 'courage')).toBe('2')
+    expect(nodeRank(shown, 'charm')).toBe('1')
+  })
+
+  it('a maxed stat shows MAX', async () => {
+    await seed('courage', 999)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '5')
+    expect(nodeRank(await chart(), 'courage')).toBe('MAX')
+  })
+
+  it('closes on its own, back to the log sheet', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+    await chart()
+    await chartGone()
+    expect(screen.getByRole('dialog', { name: 'Boxing' })).toBeTruthy()
+  })
+
+  it('a tap skips it', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+    const shown = await chart()
+    await sleep(450) // it can be skipped after 0.4 s
+    await user.click(shown)
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Points earned' })).toBeNull(), { timeout: 600 })
+  })
+
+  it('a rank-up waits for the chart to close', async () => {
+    await seed('courage', 58)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+    await chart()
+    await sleep(600)
+    expect(screen.queryByRole('dialog', { name: 'Rank up' })).toBeNull()
+    await chartGone()
+    expect(await screen.findByRole('dialog', { name: 'Rank up' }, { timeout: 2000 })).toBeTruthy()
+  })
+
+  it('does not come up for edits or deletes', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 25)
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await user.click(within(sheet).getByRole('button', { name: 'Edit' }))
+    const box = within(sheet).getByLabelText('Edit minutes')
+    await user.clear(box)
+    await user.type(box, '40')
+    await user.click(within(sheet).getByRole('button', { name: 'Save' }))
+    await within(sheet).findByText('40 min')
+    await user.click(within(sheet).getByRole('button', { name: 'Delete' }))
+    await within(sheet).findByText(/no sessions yet today/i)
+    await sleep(500)
+    expect(screen.queryByRole('status', { name: 'Points earned' })).toBeNull()
+  })
+
+  it('does not come up when a log earns nothing (every stat it feeds is maxed)', async () => {
+    await seed('courage', 1000)
+    await seed('charm', 1000)
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const sheet = await openSheet(user, 'Boxing')
+    await logInSheet(user, sheet, '25')
+    await within(sheet).findByText('25 min')
+    await sleep(500)
+    expect(screen.queryByRole('status', { name: 'Points earned' })).toBeNull()
+  })
+
+  it('with Reduce Motion: no beads fly', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const beads = countBeads()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25')
+    await chart()
+    await sleep(800)
+    beads.stop()
+    expect(beads.seen.beads).toBe(0)
+  })
+
+  it('with Reduce Motion off: one bead per point flies in, and the tallies count up to the totals', { timeout: 10_000 }, async () => {
+    reduceMotion = false
+    await store.addToList('boxing', 'daily')
+    const user = await renderApp()
+    const beads = countBeads()
+    await logInSheet(user, await openSheet(user, 'Boxing'), '25') // +2 Charm, +3 Courage
+    const shown = await chart()
+    expect(tally(shown, 'courage')).toBe('')
+    await waitFor(() => expect(tally(shown, 'courage')).toBe('+3'), { timeout: 3000 })
+    expect(tally(shown, 'charm')).toBe('+2')
+    beads.stop()
+    expect(beads.seen.beads).toBe(5)
+  })
+})
+
 describe('rank-up and graduation', () => {
   type User = ReturnType<typeof userEvent.setup>
   const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
-  // The full-screen moment. It waits ~0.95 s after the change (0.4 s with Reduce Motion).
-  const moment = (name: 'Rank up' | 'Graduated') => screen.findByRole('dialog', { name }, { timeout: 3000 })
+  // The full-screen moment. After a log it waits for the points chart to close (up to ~3 s);
+  // after an edit it waits ~0.95 s (0.4 s with Reduce Motion).
+  const moment = (name: 'Rank up' | 'Graduated') => screen.findByRole('dialog', { name }, { timeout: 5000 })
   const continueIn = (dialog: HTMLElement) => within(dialog).getByRole('button', { name: /continue/i }) as HTMLButtonElement
   // Continue is disabled until the moment can be tapped away.
   const tapAway = async (user: User, dialog: HTMLElement) => {
@@ -869,13 +1007,13 @@ describe('rank-up and graduation', () => {
     await seed('proficiency', 999)
   }
 
-  it('plays after the floating points, shows the stat, old → new rank and title, and no next-rank info', async () => {
+  it('plays after the points chart, shows the stat, old → new rank and title, and no next-rank info', async () => {
     await seed('courage', 58)
     await store.addToList('boxing', 'daily')
     const user = await renderApp()
     const sheet = await openSheet(user, 'Boxing')
     await logInSheet(user, sheet, '25') // Courage 58 → 61: rank 1 → 2
-    await within(sheet).findByText(/\+3 Courage/)
+    await screen.findByRole('status', { name: 'Points earned' })
     expect(screen.queryByRole('dialog', { name: 'Rank up' })).toBeNull()
 
     const up = await moment('Rank up')
