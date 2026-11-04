@@ -504,9 +504,10 @@ async function transition(swap, dir) {
     return animate(to, { opacity: [0, 1] }, { duration: 0.18 })
   }
   const wipe = $('wipe'), bars = [...wipe.children]
-  const a = dir > 0 ? '-130%' : '130%', b = dir > 0 ? '130%' : '-130%'
+  // Start just off-screen with a fast-starting ease, so the wipe follows the tap's pop at once.
+  const a = dir > 0 ? '-95%' : '95%', b = dir > 0 ? '130%' : '-130%'
   bars.forEach((bar) => (bar.style.transform = `translateX(${a})`)); wipe.hidden = false
-  await animate(bars, { x: [a, '0%'] }, { duration: 0.26, ease: [0.7, 0, 0.3, 1], delay: stagger(0.05) })
+  await animate(bars, { x: [a, '0%'] }, { duration: 0.26, ease: [0.3, 0.5, 0.3, 1], delay: stagger(0.05) })
   swap()
   await animate(bars, { x: ['0%', b] }, { duration: 0.3, ease: [0.7, 0, 0.3, 1], delay: stagger(0.05) })
   wipe.hidden = true
