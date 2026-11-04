@@ -880,21 +880,12 @@ async function pointsChart(tag, before, after) {
   const grow = { ...from }
   await Promise.all(gained.map(async (s, k) => {
     await wait(k * 140)
-    // The chip sits on its node and starts out at the caption. It swirls in: it travels toward
-    // the node while orbiting in a small circle (alternating direction per chip) that opens up,
-    // then tightens to nothing as it lands. The orbit stays small so the chip stays on screen.
-    const [tx, ty] = center(nodes[s].c), ox = sx - tx, oy = sy - ty
+    // The chip sits on its node and starts out at the caption, then flies straight in.
+    const [tx, ty] = center(nodes[s].c)
     const chip = document.createElement('div'); chip.className = 'pc-chip d'
     chip.textContent = `+${after[s] - before[s]}`; chip.style.left = tx + 'px'; chip.style.top = ty + 'px'
-    const turn = (k % 2 ? -1 : 1) * Math.PI * 2 * 2.2
-    const place = (p) => {
-      const travel = 1 - (1 - p) ** 2.2
-      const a = turn * p, orbit = 56 * (1 - p) * Math.min(1, p * 4)
-      const x = ox * (1 - travel) + Math.cos(a) * orbit, y = oy * (1 - travel) + Math.sin(a) * orbit
-      chip.style.transform = `translate3d(${x}px,${y}px,0) scale(${1.2 - 0.7 * p})`
-    }
-    place(0); stage.appendChild(chip)
-    await animate(0, 1, { duration: 0.85, ease: 'linear', onUpdate: place })
+    stage.appendChild(chip)
+    await animate(chip, { x: [sx - tx, 0], y: [sy - ty, 0], scale: [1.2, 0.5] }, { duration: 0.5, ease: [0.5, 0, 0.2, 1] })
     chip.remove()
     // 3. It lands: the node pulses, the shape grows to the new level.
     burst(tx, ty, 10, 46)
