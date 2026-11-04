@@ -265,7 +265,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .pc-chart .node, .pc-chart .burst { transform-box: fill-box; transform-origin: center; }
 .pc-chart .label { fill: var(--ink); font: 900 italic 12px var(--f-display); letter-spacing: 0.08em; text-anchor: middle; paint-order: stroke; stroke: var(--black); stroke-width: 4px; }
 .pc-chart .burst { fill: none; stroke: var(--lime); stroke-width: 4; }
-.pc-chip { position: absolute; z-index: 46; padding: 3px 10px; border-radius: 999px; background: var(--lime); color: var(--black); font-size: 16px; box-shadow: 3px 3px 0 var(--black); translate: -50% -50%; pointer-events: none; white-space: nowrap; }
+/* One bead per point: a small glossy orb that flies from the caption into the stat. */
+.pc-bead { position: absolute; z-index: 46; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 32% 30%, var(--ink) 0 18%, var(--lime) 34%, var(--g) 75%); box-shadow: 0 0 8px var(--g); }
+/* The running "+N" next to each node, counting up as beads land. */
+.pc-chart .tally { fill: var(--lime); font: 900 italic 15px var(--f-display); text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: var(--black); stroke-width: 5px; transform-box: fill-box; transform-origin: center; }
 
 /* Mockup-only controls */
 .mock { position: absolute; right: 12px; bottom: 12px; z-index: 60; display: grid; justify-items: end; gap: 8px; }
@@ -396,6 +400,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
       <button id="mMax">Play a max rank-up</button>
       <button id="mChart">Play points chart</button>
       <button id="mChartUp">Play points chart with a rank-up</button>
+      <button id="mChartBig">Play points chart for a big log (5 h)</button>
       <button id="mGrad">Play graduation</button>
       <button id="mBoth">Play two rank-ups, then graduation</button>
       <button id="mReset">Reset the demo</button>
@@ -847,7 +852,7 @@ async function pointsChart(tag, before, after) {
     if (!pcDone) return
     const finish = pcDone; pcDone = null
     await animate(pc, { opacity: 0 }, { duration: 0.22 })
-    pc.hidden = true; stage.classList.remove('busy'); animate(pc, { opacity: 1 }, { duration: 0 }); stage.querySelectorAll('.pc-chip').forEach((c) => c.remove())
+    pc.hidden = true; stage.classList.remove('busy'); animate(pc, { opacity: 1 }, { duration: 0 }); stage.querySelectorAll('.pc-bead').forEach((c) => c.remove())
     finish()
   }
   pc.onclick = () => skippable && close()
@@ -861,8 +866,17 @@ async function pointsChart(tag, before, after) {
     return up
   }
 
+  // A running "+N" beside each node, out of the way of its label: right of the top and bottom
+  // nodes, under the side nodes.
+  const tallies = {}
+  for (const s of STATS) {
+    const [x, y] = at(s, 5), off = nodeRadius(5) + 16
+    tallies[s] = el('text', { class: 'tally', x: AXES[s][0] === 0 ? x + off : x, y: AXES[s][0] === 0 ? y : y + off })
+  }
+
   if (RM) {
     drawShape(to); gained.forEach(settle)
+    gained.forEach((s) => (tallies[s].textContent = `+${after[s] - before[s]}`))
     await animate(pc, { opacity: [0, 1] }, { duration: 0.2 })
     setTimeout(close, 1400)
     return done
@@ -875,33 +889,59 @@ async function pointsChart(tag, before, after) {
   animate($('pcTag'), { y: [30, 0], opacity: [0, 1] }, { ...SNAP, delay: 0.2 })
   await wait(480)
 
-  // 2. "+N" chips fly from the plate's tag into each stat that gained points.
+  // 2. One bead per point, one at a time, stat by stat (stat order), straight from the caption
+  // into the node. Big gains cap at 12 beads a stat, each then worth a share of the points.
   const [sx, sy] = center($('pcTag'))
-  const grow = { ...from }
-  await Promise.all(gained.map(async (s, k) => {
-    await wait(k * 140)
-    // The chip sits on its node and starts out at the caption, then flies straight in.
+  const grow = { ...from }, rankNow = Object.fromEntries(STATS.map((s) => [s, rankOf(before[s])]))
+  const MAX_BEADS = 12
+  const flights = []
+  let launch = 0
+  for (const s of gained) {
+    const total = after[s] - before[s], beads = Math.min(total, MAX_BEADS)
+    // Whole points spread as evenly as possible over the beads (e.g. 32 → 3,2,3,3,...).
+    const share = (i) => Math.floor(((i + 1) * total) / beads) - Math.floor((i * total) / beads)
+    let landed = 0
+    for (let i = 0; i < beads; i++) {
+      const value = share(i)
+      flights.push(flyBead(s, launch, () => land(s, (landed += value))))
+      launch += beads > 6 ? 70 : 110
+    }
+    launch += 140 // a beat between stats
+  }
+
+  async function flyBead(s, delay, onLand) {
+    await wait(delay)
     const [tx, ty] = center(nodes[s].c)
-    const chip = document.createElement('div'); chip.className = 'pc-chip d'
-    chip.textContent = `+${after[s] - before[s]}`; chip.style.left = tx + 'px'; chip.style.top = ty + 'px'
-    stage.appendChild(chip)
-    await animate(chip, { x: [sx - tx, 0], y: [sy - ty, 0], scale: [1.2, 0.5] }, { duration: 0.5, ease: [0.5, 0, 0.2, 1] })
-    chip.remove()
-    // 3. It lands: the node pulses, the shape grows to the new level.
-    burst(tx, ty, 10, 46)
-    animate(0, 1, { duration: 0.45, ease: [0.2, 0.8, 0.2, 1], onUpdate: (p) => { grow[s] = from[s] + (to[s] - from[s]) * p; drawShape(grow) } })
-    const startR = nodeRadius(rankOf(before[s]))
-    if (settle(s)) {
-      // 4. A rank-up: the node swells to its new size with a ring burst.
-      nodes[s].c.setAttribute('r', startR)
-      animate(startR, nodeRadius(rankOf(after[s])), { type: 'spring', stiffness: 320, damping: 12, onUpdate: (r) => nodes[s].c.setAttribute('r', r) })
+    const bead = document.createElement('i'); bead.className = 'pc-bead'
+    bead.style.left = tx + 'px'; bead.style.top = ty + 'px'
+    stage.appendChild(bead)
+    await animate(bead, { x: [sx - tx, 0], y: [sy - ty, 0], scale: [1.3, 0.7] }, { duration: 0.42, ease: [0.5, 0, 0.2, 1] })
+    bead.remove()
+    onLand()
+  }
+
+  // 3. A bead lands: the tally ticks up, the node pulses, the shape grows a step.
+  function land(s, landed) {
+    const points = before[s] + landed, [tx, ty] = center(nodes[s].c)
+    tallies[s].textContent = `+${landed}`
+    animate(tallies[s], { scale: [1.5, 1] }, { duration: 0.22 })
+    animate(nodes[s].g, { scale: [1, 1.2, 1] }, { duration: 0.22 })
+    burst(tx, ty, 4, 26)
+    animate(grow[s], level(points), { duration: 0.2, onUpdate: (v) => { grow[s] = v; drawShape(grow) } })
+    // 4. The bead that crosses a rank: the node swells to its new size with a ring burst.
+    const rank = rankOf(points)
+    if (rank > rankNow[s]) {
+      const startR = nodeRadius(rankNow[s]); rankNow[s] = rank
+      nodes[s].t.textContent = rank === 5 ? 'MAX' : rank
+      nodes[s].g.setAttribute('class', rank === 5 ? 'node max' : 'node')
+      animate(startR, nodeRadius(rank), { type: 'spring', stiffness: 320, damping: 12, onUpdate: (r) => nodes[s].c.setAttribute('r', r) })
       const [nx, ny] = at(s, 5)
       const ring = el('circle', { class: 'burst', cx: nx, cy: ny, r: startR })
       animate(0, 1, { duration: 0.6, ease: 'easeOut', onUpdate: (p) => { ring.setAttribute('r', startR + p * 40); ring.style.opacity = 1 - p } }).then(() => ring.remove())
       burst(tx, ty, 22, 110)
     }
-    animate(nodes[s].g, { scale: [1, 1.35, 1] }, { duration: 0.4 })
-  }))
+  }
+  await Promise.all(flights)
 
   // 5. Hold a beat, then close on its own (or tap to skip).
   await wait(900)
@@ -1151,6 +1191,12 @@ $('mChartUp').addEventListener('click', async () => {
   $('mockPanel').hidden = true
   await pointsChart('Running · 60 min', { charm: 131, courage: 57, intelligence: 241, proficiency: 85 }, { charm: 131, courage: 63, intelligence: 241, proficiency: 89 })
   playEvents([{ type: 'rankUp', stat: 'courage', from: 1, to: 2 }])
+})
+$('mChartBig').addEventListener('click', async () => {
+  $('mockPanel').hidden = true
+  // Running 300 min: 32 points, Courage 60% (+20) and Proficiency 40% (+13).
+  await pointsChart('Running · 300 min', { charm: 131, courage: 57, intelligence: 241, proficiency: 190 }, { charm: 131, courage: 77, intelligence: 241, proficiency: 203 })
+  playEvents([{ type: 'rankUp', stat: 'courage', from: 1, to: 2 }, { type: 'rankUp', stat: 'proficiency', from: 2, to: 3 }])
 })
 $('mGrad').addEventListener('click', () => { $('mockPanel').hidden = true; graduate() })
 $('mBoth').addEventListener('click', () => {
