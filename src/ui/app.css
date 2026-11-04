@@ -427,14 +427,6 @@ button:disabled {
   display: none;
 }
 
-.soon {
-  margin: 24px 0 0;
-  rotate: -4deg;
-  font: 900 italic 28px var(--display);
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 /* Wipe and bubble bursts */
 
 .wipe {
@@ -803,6 +795,182 @@ section + section h2 {
   color: var(--g);
 }
 
+/* My habits */
+
+.new-habit {
+  display: block;
+  width: calc(100% - 12px);
+  height: 52px;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  border: 2px dashed var(--g);
+  color: var(--g);
+  font: 900 italic 16px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  rotate: -4deg;
+}
+
+.lib-row.mine {
+  gap: 8px;
+  padding-right: 8px;
+}
+
+.ctag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--lime);
+  color: var(--black);
+  font-style: italic;
+}
+
+/* The kind tag is a button: tap to switch. Daily is filled, anytime outlined. */
+.kind {
+  flex: none;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 2px solid var(--g);
+  color: var(--g);
+  font: 900 italic 11px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.kind.daily {
+  background: var(--g);
+  color: var(--black);
+}
+
+.remove {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  font: 900 20px / 1 var(--display);
+}
+
+.toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(20px + var(--safe-bottom));
+  z-index: 15;
+  max-width: 448px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 20px;
+  border-radius: 999px;
+  background: var(--black);
+  border: 2px solid var(--g);
+  box-shadow: 5px 5px 0 color-mix(in srgb, var(--g) 40%, transparent);
+  rotate: -2deg;
+}
+
+.toast-space {
+  height: 72px;
+}
+
+.toast span {
+  flex: 1;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.toast button {
+  flex: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--black);
+  font: 900 italic 14px var(--display);
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* New custom habit sheet */
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field input {
+  width: 100%;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend,
+.field label {
+  padding: 0;
+  font: 800 11px var(--display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sheet .chips {
+  margin: 8px 0 0;
+  rotate: -2deg;
+}
+
+.split {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.split-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.split-row span {
+  flex: 1;
+  font: 900 italic 16px var(--display);
+  text-transform: uppercase;
+}
+
+.split-row button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--g);
+  color: var(--g);
+  font: 900 20px / 1 var(--display);
+}
+
+.split-row output {
+  width: 3ch;
+  text-align: center;
+  font: 900 italic 22px var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  margin: 0;
+  text-align: right;
+  font: 800 12px var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--g);
+}
+
+.total.off {
+  color: var(--warn);
+}
+
 /* Stats */
 
 .grad {
@@ -1159,7 +1327,8 @@ input:focus {
   border-color: var(--g);
 }
 
-.log {
+.log,
+.save {
   width: calc(100% - 8px);
   margin-top: 4px;
   height: 58px;

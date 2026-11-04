@@ -3,6 +3,7 @@
 import type { Weights } from '../engine/scoring'
 import { STATS, type Stat } from '../engine/stats'
 import type { Category, Habit } from '../library/library'
+import type { HabitKind } from '../storage/db'
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   fitness: 'Fitness',
@@ -12,6 +13,8 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   reading: 'Reading',
   art: 'Art',
 }
+
+export const KIND_LABELS: Record<HabitKind, string> = { daily: 'Daily', anytime: 'Anytime' }
 
 // The stats a habit feeds, biggest weight first; equal weights in SPEC order (sort is stable).
 export const statsByWeight = (weights: Weights): Stat[] =>

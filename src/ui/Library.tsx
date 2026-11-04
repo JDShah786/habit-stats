@@ -6,7 +6,7 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import { CATEGORIES, HABITS, type Category } from '../library/library'
 import type { HabitKind } from '../storage/db'
 import type { Store } from '../storage/store'
-import { CATEGORY_LABELS, filterLibrary, statsByWeight } from './libraryView'
+import { CATEGORY_LABELS, filterLibrary, KIND_LABELS, statsByWeight } from './libraryView'
 import { BOUNCY, burst, SNAP, tapPoint } from './motionKit'
 import { usePrefersReducedMotion } from './reducedMotion'
 import { statName } from './todayView'
@@ -22,8 +22,6 @@ interface Props {
   dataVersion: number
   onDataChange: () => void
 }
-
-const KIND_LABELS: Record<HabitKind, string> = { daily: 'Daily', anytime: 'Anytime' }
 
 export function Library({ store, active, category, onCategory, dataVersion, onDataChange }: Props) {
   const reduced = usePrefersReducedMotion()

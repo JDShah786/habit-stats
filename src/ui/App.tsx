@@ -10,7 +10,7 @@ import { hasAnnouncement } from './announce'
 import { Bubbles, DateBlock } from './Decor'
 import { Library } from './Library'
 import { Menu } from './Menu'
-import { SECTIONS } from './motionKit'
+import { MyHabits } from './MyHabits'
 import { RankBanner } from './RankBanner'
 import { usePrefersReducedMotion } from './reducedMotion'
 import { Sections } from './Sections'
@@ -90,7 +90,15 @@ export function App({ store, now = () => new Date() }: Props) {
                   />
                 )
               if (i === 2) return <Stats store={store} active={index === 2} dataVersion={dataVersion} />
-              return <ComingSoon title={SECTIONS[i]} />
+              return (
+                <MyHabits
+                  store={store}
+                  active={index === 3}
+                  dataVersion={dataVersion}
+                  onDataChange={dataChanged}
+                  onGoToLibrary={() => setIndex(1)}
+                />
+              )
             }}
           />
         )}
@@ -108,15 +116,5 @@ export function App({ store, now = () => new Date() }: Props) {
         )}
       </div>
     </MotionConfig>
-  )
-}
-
-// Stand-in until each section's own PR lands.
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <>
-      <h1>{title}</h1>
-      <p className="soon">Coming soon</p>
-    </>
   )
 }

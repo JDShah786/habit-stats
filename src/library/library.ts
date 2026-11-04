@@ -19,6 +19,11 @@ export const HABITS = habitsJson as Habit[]
 // Lowercase letters and digits, joined by single hyphens.
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
+// A name as a slug: "  Morning Walk! " → "morning-walk". Empty if it has no letter A–Z or digit.
+// Custom habit ids are 'custom-' + this, so two names with the same slug clash.
+export const slugOf = (name: string) =>
+  name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
 // Every problem in a preset list. Empty when the list is valid.
 export function validateLibrary(habits: readonly Habit[]): string[] {
   const errors: string[] = []

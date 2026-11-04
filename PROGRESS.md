@@ -5,15 +5,13 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 - [x] 1. Scoring engine (rules 1–8 + corrections) + tests — PR #1, merged 2026-10-27
 - [x] 2. Habit library file + validation tests — PR #4, merged 2026-10-27
 - [x] 3. Storage layer (Dexie) — PR #6, merged 2026-10-27
-- [ ] 4. Screens: Today → Library → Stats → My habits
+- [x] 4. Screens: Today → Library → Stats → My habits — PRs #9, #11–#15, merged 2026-11-04
 - [ ] 5. Rank-up and graduation animations
 - [ ] 6. Settings export/import
 - [ ] 7. PWA install + offline (deploy already runs from main, see decisions log)
 
 ## Notes for later steps
 
-- Step 4: custom habit weights default to equal (SPEC). Decide how 3 stats split 100 (e.g. 34/33/33), and whether custom weights must be multiples of 10.
-- Step 4: custom habit names with no Latin letters or digits get no id and are rejected. Revisit if needed.
 - Step 4/5: Lottie player library not chosen yet. Needs Hamid's approval before any Lottie code. Claude's recommendation: lottie-web light build (MIT, ~47 KB gzipped, bundles in so it works offline; skips "expressions", so check each file). Decide when a mockup needs a specific animation.
 - Library goal (Hamid): ship the most common habits in the world, so custom habits are rarely needed. Grow habits.json over time.
 
@@ -86,3 +84,11 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-11-03 | 4 | Today's next-rank bar drops its number: "COURAGE · NEXT: RANK 2" plus the bar. It still picks the stat with the fewest points left. Replaces the "N TO RANK N" wording from 3b. | Same rule as Stats. | No |
 | 2026-11-03 | 4 | Stats shows a GRADUATED pill above the cards when all four stats are at 1000; it goes away if a delete un-graduates you. No points-today tag. The Stats look will be restyled later. | Hamid's call; keep Stats simple for now. | No |
 | 2026-11-03 | 4 | Stats replays its card and bar animation each time you arrive on it, and refreshes after any log, edit, delete or Library add. | Matches the prototype; the sections stay loaded side by side, so they reload on a shared data-version counter. | No |
+| 2026-11-03 | 4 | Custom habit weights follow the preset rule: multiples of 10, from 10 to 100, summing to 100. The form starts from an even split in steps of 10: 100 / 50-50 / 40-30-30 / 30-30-20-20; the first stat picked gets the spare 10. Turning a stat on or off resets to that split. Storage rejects anything else. Replaces "weights default to equal". | Equal thirds can't be whole multiples of 10; one rule for every habit. | No |
+| 2026-11-03 | 4 | New custom habit is a bottom sheet: Name, Category (no default, required; picking one pre-selects SPEC's default stats), Stats chips, weights with -/+ by 10 (10 to 100) and "Total N / 100", Show as DAILY (default) or ANYTIME, and Save (off until the total is 100). Save creates the habit and puts it on your list. Closes with ✕, a tap outside or a drag down. | Hamid's call; same sheet feel as the log sheet. | No |
+| 2026-11-03 | 4 | Custom habit names: required, 40 characters at most, need a letter A–Z or a digit, and can't match any preset or custom name (ignoring case, or giving the same slug). The form shows the reason; storage checks too. | A name must give a unique id; short names fit the rows. | No |
+| 2026-11-03 | 4 | No editing custom habits in v1. Once saved, name and weights are fixed. | Replays use a habit's weights, so editing would rewrite past points. | No |
+| 2026-11-03 | 4 | My habits shows two groups: YOUR LIST (Today order; name, stats, DAILY/ANYTIME tag, plus CUSTOM on custom habits) and YOUR CUSTOM HABITS (custom habits off your list, + then DAILY/ANYTIME to add one back; hidden when there are none). An empty list says "Your list is empty" with Go to Library. | One place to manage your list; custom habits are never lost. | No |
+| 2026-11-03 | 4 | Tapping a row's DAILY/ANYTIME tag switches its kind and keeps addedOn (store.setKind). | Switching isn't re-adding. | No |
+| 2026-11-03 | 4 | Remove slides the row away and shows "Removed. Its history stays." with UNDO for 5 s. Only the latest remove can be undone; the toast also goes on another remove or when leaving My habits. Undo puts the row back exactly (same addedOn and kind). | Mistakes are cheap to fix; history is never touched either way. | No |
+| 2026-11-03 | 4 | No SETTINGS button on My habits until step 6. | No dead buttons. | No |

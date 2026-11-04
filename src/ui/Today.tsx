@@ -1,15 +1,15 @@
 // Today screen (SPEC "Screens"): daily checklist + anytime habits, the stat closest to its next
 // rank, and a sheet to log, edit or delete today's sessions.
 
-import { motion, useDragControls, type PanInfo } from 'motion/react'
-import { useId, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
-import { createPortal } from 'react-dom'
+import { motion } from 'motion/react'
+import { useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import { progressOf, STATS, type RankEvent, type Stat, type StatPoints } from '../engine/stats'
 import type { Habit } from '../library/library'
 import type { HabitKind, SessionRow } from '../storage/db'
 import type { Store } from '../storage/store'
 import { burst, SNAP, SOFT, tapPoint } from './motionKit'
 import { usePrefersReducedMotion } from './reducedMotion'
+import { Sheet } from './Sheet'
 import { minutesOn, useTodayData } from './todayData'
 import { statsByWeight } from './libraryView'
 import { nearestRank, statName } from './todayView'
@@ -102,23 +102,20 @@ export function Today({ store, dataVersion, onDataChange, onEvents, onGoToLibrar
 
       <NextRank totals={data.totals} />
 
-      {/* Rendered into <body>: inside the moving swipe track, position: fixed would follow the track. */}
-      {open &&
-        createPortal(
-          <LogSheet
-            habit={open}
-            sessions={data.sessions.filter((s) => s.habitId === open.id)}
-            store={store}
-            reduced={reduced}
-            onEvents={onEvents}
-            onChange={async () => {
-              await reload()
-              onDataChange()
-            }}
-            onClose={() => setOpenId(null)}
-          />,
-          document.body,
-        )}
+      {open && (
+        <LogSheet
+          habit={open}
+          sessions={data.sessions.filter((s) => s.habitId === open.id)}
+          store={store}
+          reduced={reduced}
+          onEvents={onEvents}
+          onChange={async () => {
+            await reload()
+            onDataChange()
+          }}
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </>
   )
 }
@@ -152,10 +149,6 @@ const QUICK_MINUTES = [5, 10, 15, 30, 60]
 // Whole minutes, 1 or more (rule 1). Storage rejects anything else too.
 const isValidMinutes = (value: string) => /^\d+$/.test(value) && Number(value) >= 1
 
-// Pulling the sheet down this far, or flicking it this fast, closes it.
-const CLOSE_DISTANCE = 90
-const CLOSE_SPEED = 600
-
 interface SheetProps {
   habit: Habit
   sessions: SessionRow[]
@@ -172,21 +165,11 @@ interface Gains {
 }
 
 function LogSheet({ habit, sessions, store, reduced, onEvents, onChange, onClose }: SheetProps) {
-  const titleId = useId()
   const box = useRef<HTMLInputElement>(null)
-  const drag = useDragControls()
   const [minutes, setMinutes] = useState('')
   const [editing, setEditing] = useState<{ id: number; minutes: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [gains, setGains] = useState<Gains | null>(null)
-  const [closing, setClosing] = useState(false)
-
-  // Slide away, then close (see onAnimationComplete). With Reduce Motion, close at once.
-  const close = () => (reduced ? onClose() : setClosing(true))
-
-  const onDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.y > CLOSE_DISTANCE || info.velocity.y > CLOSE_SPEED) close()
-  }
 
   // Runs a storage action; shows its reason if storage rejects it. Any earlier gains clear.
   // True if it worked.
@@ -220,134 +203,115 @@ function LogSheet({ habit, sessions, store, reduced, onEvents, onChange, onClose
   }
 
   return (
-    <>
-      <div className="sheet-backdrop" onClick={() => close()} />
-      <motion.div
-        className="sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        initial={{ y: reduced ? 0 : '100%' }}
-        animate={{ y: closing ? '110%' : 0 }}
-        transition={closing ? { duration: 0.24, ease: [0.4, 0, 1, 1] } : { type: 'spring', stiffness: 420, damping: 34 }}
-        onAnimationComplete={() => closing && onClose()}
-        drag="y"
-        dragControls={drag}
-        dragListener={false}
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0.05, bottom: 1 }}
-        onDragEnd={onDragEnd}
-      >
-        {/* Grab the top of the sheet to drag it down; the rest scrolls and types as normal. */}
-        <div className="sheet-grab" onPointerDown={(e) => drag.start(e)}>
-          <div className="handle" aria-hidden="true" />
-          <header className="sheet-head">
-            <h2 id={titleId}>{habit.name}</h2>
-            <button className="close" aria-label="Close" onClick={() => close()}>
-              ✕
-            </button>
-          </header>
-          <div className="weights">
-            {statsByWeight(habit.weights).map((stat) => (
-              <span key={stat}>
-                {statName(stat)} {habit.weights[stat]}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="minutes-input">
-          <input
-            ref={box}
-            className="mins"
-            aria-label="Minutes"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="0"
-            style={{ width: `${Math.max(minutes.length, 1) + 0.3}ch` }}
-            value={minutes}
-            onChange={(e) => setMinutes(e.target.value)}
-          />
-          <span className="unit" aria-hidden="true">
-            min
-          </span>
-          <div className="gains" aria-live="polite">
-            {gains?.points.map(([stat, n], k) => (
-              <motion.span
-                key={`${gains.id}-${stat}`}
-                initial={{ y: 12, opacity: 0 }}
-                animate={{ y: -30, opacity: [0, 1, 1, 0] }}
-                transition={{ duration: 1.6, delay: k * 0.15, ease: 'easeOut' }}
-              >
-                +{n} {statName(stat)}
-              </motion.span>
-            ))}
-          </div>
-        </div>
-        <div className="quick">
-          {QUICK_MINUTES.map((n) => (
-            <motion.button
-              key={n}
-              className={minutes === String(n) ? 'on' : undefined}
-              whileTap={{ scale: 0.88 }}
-              onClick={() => setMinutes(String(n))}
-            >
-              {n}
-            </motion.button>
+    <Sheet
+      title={habit.name}
+      reduced={reduced}
+      onClose={onClose}
+      head={
+        <div className="weights">
+          {statsByWeight(habit.weights).map((stat) => (
+            <span key={stat}>
+              {statName(stat)} {habit.weights[stat]}
+            </span>
           ))}
-          <motion.button className="custom" whileTap={{ scale: 0.88 }} onClick={custom}>
-            Custom
-          </motion.button>
         </div>
+      }
+    >
+      {() => (
+        <>
+          <div className="minutes-input">
+            <input
+              ref={box}
+              className="mins"
+              aria-label="Minutes"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="0"
+              style={{ width: `${Math.max(minutes.length, 1) + 0.3}ch` }}
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+            />
+            <span className="unit" aria-hidden="true">
+              min
+            </span>
+            <div className="gains" aria-live="polite">
+              {gains?.points.map(([stat, n], k) => (
+                <motion.span
+                  key={`${gains.id}-${stat}`}
+                  initial={{ y: 12, opacity: 0 }}
+                  animate={{ y: -30, opacity: [0, 1, 1, 0] }}
+                  transition={{ duration: 1.6, delay: k * 0.15, ease: 'easeOut' }}
+                >
+                  +{n} {statName(stat)}
+                </motion.span>
+              ))}
+            </div>
+          </div>
+          <div className="quick">
+            {QUICK_MINUTES.map((n) => (
+              <motion.button
+                key={n}
+                className={minutes === String(n) ? 'on' : undefined}
+                whileTap={{ scale: 0.88 }}
+                onClick={() => setMinutes(String(n))}
+              >
+                {n}
+              </motion.button>
+            ))}
+            <motion.button className="custom" whileTap={{ scale: 0.88 }} onClick={custom}>
+              Custom
+            </motion.button>
+          </div>
 
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-
-        <div className="sess">
-          <h3>Today's sessions</h3>
-          {sessions.length === 0 ? (
-            <p className="muted">No sessions yet today.</p>
-          ) : (
-            <ul role="list" aria-label="Today's sessions" className="sessions">
-              {sessions.map((s) => {
-                const edit = editing?.id === s.id ? editing : null
-                return edit ? (
-                  <li key={s.id}>
-                    <label>
-                      Edit minutes
-                      <input
-                        inputMode="numeric"
-                        value={edit.minutes}
-                        onChange={(e) => setEditing({ id: edit.id, minutes: e.target.value })}
-                      />
-                    </label>
-                    <button
-                      disabled={!isValidMinutes(edit.minutes)}
-                      onClick={() => run(() => store.editSession(edit.id, Number(edit.minutes)), () => setEditing(null))}
-                    >
-                      Save
-                    </button>
-                    <button onClick={() => setEditing(null)}>Cancel</button>
-                  </li>
-                ) : (
-                  <li key={s.id}>
-                    <span>{s.minutes} min</span>
-                    <button onClick={() => setEditing({ id: s.id!, minutes: String(s.minutes) })}>Edit</button>
-                    <button onClick={() => run(() => store.deleteSession(s.id!), () => {})}>Delete</button>
-                  </li>
-                )
-              })}
-            </ul>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
           )}
-        </div>
 
-        <motion.button className="primary log" disabled={!isValidMinutes(minutes)} whileTap={{ scale: 0.95 }} onClick={log}>
-          Log
-        </motion.button>
-      </motion.div>
-    </>
+          <div className="sess">
+            <h3>Today's sessions</h3>
+            {sessions.length === 0 ? (
+              <p className="muted">No sessions yet today.</p>
+            ) : (
+              <ul role="list" aria-label="Today's sessions" className="sessions">
+                {sessions.map((s) => {
+                  const edit = editing?.id === s.id ? editing : null
+                  return edit ? (
+                    <li key={s.id}>
+                      <label>
+                        Edit minutes
+                        <input
+                          inputMode="numeric"
+                          value={edit.minutes}
+                          onChange={(e) => setEditing({ id: edit.id, minutes: e.target.value })}
+                        />
+                      </label>
+                      <button
+                        disabled={!isValidMinutes(edit.minutes)}
+                        onClick={() => run(() => store.editSession(edit.id, Number(edit.minutes)), () => setEditing(null))}
+                      >
+                        Save
+                      </button>
+                      <button onClick={() => setEditing(null)}>Cancel</button>
+                    </li>
+                  ) : (
+                    <li key={s.id}>
+                      <span>{s.minutes} min</span>
+                      <button onClick={() => setEditing({ id: s.id!, minutes: String(s.minutes) })}>Edit</button>
+                      <button onClick={() => run(() => store.deleteSession(s.id!), () => {})}>Delete</button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
+          <motion.button className="primary log" disabled={!isValidMinutes(minutes)} whileTap={{ scale: 0.95 }} onClick={log}>
+            Log
+          </motion.button>
+        </>
+      )}
+    </Sheet>
   )
 }
