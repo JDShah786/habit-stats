@@ -16,6 +16,45 @@ export function tapPoint(e: MouseEvent<HTMLElement>): [number, number] {
   return [r.left + r.width / 2, r.top + r.height / 2]
 }
 
+// Centre of an element on screen.
+export function centerOf(el: Element): [number, number] {
+  const r = el.getBoundingClientRect()
+  return [r.left + r.width / 2, r.top + r.height / 2]
+}
+
+// Glowing streaks that shoot out in every direction from a point. Decorative only.
+export function sparks([x, y]: [number, number], count = 24, distance = 230) {
+  for (let i = 0; i < count; i++) {
+    const spark = document.createElement('i')
+    spark.className = 'spark'
+    spark.setAttribute('aria-hidden', 'true')
+    spark.style.left = `${x}px`
+    spark.style.top = `${y}px`
+    spark.style.rotate = `${(i / count) * 360 + Math.random() * 10}deg`
+    document.body.append(spark)
+    void animate(
+      spark,
+      { y: [0, distance * (0.7 + Math.random() * 0.6)], scaleY: [0.4, 1.6, 0.2], opacity: [1, 1, 1, 0] },
+      { duration: 0.6 + Math.random() * 0.2, ease: [0.1, 0.9, 0.3, 1] },
+    ).then(() => spark.remove())
+  }
+}
+
+// A ring that blasts outward from a point. Decorative only.
+export function shockwave([x, y]: [number, number]) {
+  const ring = document.createElement('i')
+  ring.className = 'shock'
+  ring.setAttribute('aria-hidden', 'true')
+  ring.style.left = `${x}px`
+  ring.style.top = `${y}px`
+  document.body.append(ring)
+  void animate(
+    ring,
+    { width: [20, 640], height: [20, 640], borderWidth: [14, 1], opacity: [1, 0] },
+    { duration: 0.6, ease: [0.15, 0.85, 0.3, 1] },
+  ).then(() => ring.remove())
+}
+
 // Glossy bubbles that pop out from a point and fade. Decorative only.
 export function burst([x, y]: [number, number], count = 10, spread = 70) {
   for (let i = 0; i < count; i++) {

@@ -6,7 +6,7 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 - [x] 2. Habit library file + validation tests — PR #4, merged 2026-10-27
 - [x] 3. Storage layer (Dexie) — PR #6, merged 2026-10-27
 - [x] 4. Screens: Today → Library → Stats → My habits — PRs #9, #11–#15, merged 2026-11-04
-- [ ] 5. Rank-up and graduation animations
+- [x] 5. Rank-up and graduation animations — PR #17, merged 2026-11-04
 - [ ] 6. Settings export/import
 - [ ] 7. PWA install + offline (deploy already runs from main, see decisions log)
 
@@ -99,3 +99,6 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-11-04 | 5 | Graduation (prototype approved): GRADUATED! lands first as the biggest thing on screen, from 4x, with impact frames (negative, hot, negative; ~70 ms each; at most 2 bright flashes), glowing sparks, a shockwave ring, a bubble burst and a strong shake. Then the four stats slide in as MAX rows with their titles, then a GOOD JOB! pill and "These habits are part of you now." About 2.4 s; can be tapped away after 1 s. Reduce Motion: no impact frames, sparks or shake; it fades in. | Hamid's review: one clear hero, more pronounced, impact frames and a boom. Flash limit keeps it safe (WCAG 2.3.1). | No |
 | 2026-11-04 | 5 | Bubble bursts draw above the rank-up and graduation screens. | They were hidden behind the overlay in the prototype. | No |
 | 2026-11-04 | 5 | The menu wipe starts right after the tap's bubble pop: bars start just off-screen with a fast-start ease (~50 ms to show, was ~135 ms). | Hamid noticed a gap between the pop and the slide. | No |
+| 2026-11-04 | 5 | Rank-up and graduation are dialogs named "Rank up" / "Graduated"; their text is read out. TAP TO CONTINUE is a real button (Enter/Space), disabled until the moment can be tapped away; Escape or a tap anywhere also taps it away. | Works with a keyboard and a screen reader, not just touch. | No |
+| 2026-11-04 | 5 | A change's moments wait ~0.95 s (0.4 s with Reduce Motion) so the floating points show first. Same delay after an edit. | Matches the approved prototype. | No |
+| 2026-11-04 | 5 | The log sheet stays open under the moment; after the last one is tapped away you're back in the sheet. | Same as "the sheet stays open after LOG". | No |

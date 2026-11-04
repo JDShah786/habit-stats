@@ -1,17 +1,17 @@
 // App shell: command-menu home, the four swipeable sections, the wipe between them, and the
-// rank banner. Opens on the menu.
+// rank-up and graduation moments. Opens on the menu.
 
 import { MotionConfig } from 'motion/react'
 import { useReducer, useRef, useState } from 'react'
 import type { RankEvent } from '../engine/stats'
 import type { Category } from '../library/library'
 import type { Store } from '../storage/store'
-import { hasAnnouncement } from './announce'
 import { Bubbles, DateBlock } from './Decor'
 import { Library } from './Library'
 import { Menu } from './Menu'
+import { moments, type Moment } from './moments'
 import { MyHabits } from './MyHabits'
-import { RankBanner } from './RankBanner'
+import { RankMoment } from './RankMoment'
 import { usePrefersReducedMotion } from './reducedMotion'
 import { Sections } from './Sections'
 import { Stats } from './Stats'
@@ -41,10 +41,21 @@ export function App({ store, now = () => new Date() }: Props) {
   // Bumped when a section changes your data (adding, logging, editing, deleting), so the
   // others reload it. All four sections stay loaded for swiping.
   const [dataVersion, dataChanged] = useReducer((n: number) => n + 1, 0)
-  const [events, setEvents] = useState<RankEvent[]>([])
-  // A banner stays until dismissed; only a new announcement replaces it.
-  const announce = (next: RankEvent[]) => {
-    if (hasAnnouncement(next)) setEvents(next)
+  // Rank-up and graduation moments waiting to play; the first one is on screen.
+  const [queue, setQueue] = useState<{ id: number; moment: Moment }[]>([])
+  const nextMomentId = useRef(0)
+  // A change's moments wait a beat (0.95 s; 0.4 s with Reduce Motion) so its floating points
+  // show first. Then they play one at a time.
+  const announce = (events: RankEvent[]) => {
+    const next = moments(events)
+    if (next.length === 0) return
+    setTimeout(
+      () => {
+        const items = next.map((moment) => ({ id: nextMomentId.current++, moment }))
+        setQueue((q) => [...q, ...items])
+      },
+      reduced ? 400 : 950,
+    )
   }
 
   // Swap screens behind the wipe, or at once with Reduce Motion.
@@ -102,7 +113,9 @@ export function App({ store, now = () => new Date() }: Props) {
             }}
           />
         )}
-        <RankBanner events={events} onDismiss={() => setEvents([])} />
+        {queue[0] && (
+          <RankMoment key={queue[0].id} moment={queue[0].moment} reduced={reduced} onDone={() => setQueue((q) => q.slice(1))} />
+        )}
         {wipe && (
           <Wipe
             key={wipe.id}

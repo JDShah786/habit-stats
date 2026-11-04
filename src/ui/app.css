@@ -457,7 +457,7 @@ button:disabled {
 
 .pop {
   position: fixed;
-  z-index: 45;
+  z-index: 55; /* above the rank-up and graduation moments */
   width: var(--s);
   height: var(--s);
   margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
@@ -1362,35 +1362,388 @@ input:focus {
   font-size: 14px;
 }
 
-/* Rank banner (placeholder until step 5) */
+/* Rank-up and graduation moments (portal into <body>, above the sheets). Each item tilts on
+   its own. Particles (.pop, .spark, .shock) sit above them at z-index 55. */
 
-.banner {
+.moment {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  outline: none;
+}
+
+.mo-bg {
   position: absolute;
-  top: calc(12px + var(--safe-top));
-  left: 12px;
-  right: 12px;
-  z-index: 30;
+  inset: 0;
+  background: radial-gradient(90% 60% at 50% 42%, var(--depth), var(--black) 72%);
+}
+
+.mo-stripes {
+  position: absolute;
+  inset: -30% -40%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 110px;
+  rotate: -14deg;
+  pointer-events: none;
+  animation: drift 6s ease-in-out infinite alternate;
+}
+
+.calm .mo-stripes {
+  animation: none;
+}
+
+@keyframes drift {
+  from {
+    translate: -24px 0;
+  }
+  to {
+    translate: 24px 0;
+  }
+}
+
+.mo-stripes i {
+  display: block;
+  height: 76px;
+  background: linear-gradient(90deg, var(--g), var(--lime));
+  opacity: 0.85;
+}
+
+.mo-stripes i:nth-child(2) {
+  height: 30px;
+  background: var(--ink);
+  opacity: 0.9;
+}
+
+.mo-flash {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mo-rise {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mo-rise i {
+  position: absolute;
+  bottom: -50px;
+  left: var(--l);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  opacity: 0.7;
+  background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 0.8), color-mix(in srgb, var(--g) 50%, transparent) 40%, transparent 72%);
+  animation: rise var(--d) linear var(--dl) infinite;
+}
+
+@keyframes rise {
+  to {
+    transform: translateY(-120vh);
+  }
+}
+
+/* Impact frames: a high-contrast negative with radial speed lines, then a hot frame. */
+.mo-lines {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: repeating-conic-gradient(from 0deg at var(--cx, 50%) var(--cy, 40%), var(--black) 0 2deg, transparent 2deg 9deg);
+}
+
+.moment.imp-a {
+  filter: invert(1) grayscale(1) contrast(4);
+}
+
+.moment.imp-b {
+  filter: contrast(2.2) saturate(2.2);
+}
+
+.moment.imp-a .mo-lines,
+.moment.imp-b .mo-lines {
+  opacity: 1;
+}
+
+.moment.imp-b .mo-lines {
+  background: repeating-conic-gradient(from 4deg at var(--cx, 50%) var(--cy, 40%), var(--ink) 0 1.5deg, transparent 1.5deg 10deg);
+}
+
+.mo-shake {
+  position: relative;
+  width: 100%;
+}
+
+.mo-content {
+  padding-inline: 16px;
+  text-align: center;
+}
+
+/* Hidden until the entrance shows them; with Reduce Motion ("calm") they're there at once. */
+.moment .seq {
+  opacity: 0;
+}
+
+.moment.calm .seq {
+  opacity: 1;
+}
+
+.mo-label {
+  display: inline-block;
+  padding: 5px 18px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--black);
+  font: 900 italic 22px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
+  rotate: -6deg;
+}
+
+.mo-stat {
+  display: block;
+  margin-top: 14px;
+  font: 900 italic 72px / 0.95 var(--display);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  text-shadow: 5px 5px 0 var(--black), 8px 8px 0 var(--g);
+  white-space: nowrap;
+  rotate: -6deg;
+}
+
+.mo-rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 6px;
+  rotate: -6deg;
+}
+
+.mo-oldwrap small {
+  display: block;
+  font: 900 italic 14px var(--display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+.mo-old {
+  display: inline-block;
+  font: 900 italic 64px var(--display);
+  color: var(--muted);
+  text-shadow: 4px 4px 0 var(--black);
+}
+
+.mo-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-block: 16px solid transparent;
+  border-left: 26px solid var(--ink);
+  filter: drop-shadow(3px 3px 0 var(--black));
+}
+
+.mo-new {
+  display: inline-block;
+  font: 900 italic 150px / 0.85 var(--display);
+  color: var(--lime);
+  text-shadow: 6px 6px 0 var(--black), 9px 9px 0 var(--ink);
+}
+
+.mo-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border-radius: 24px;
-  background: linear-gradient(100deg, var(--g), var(--lime));
-  color: var(--black);
-  box-shadow: 6px 6px 0 var(--black), 8px 8px 0 var(--ink);
+  justify-content: center;
+  gap: 8px 12px;
+  margin-top: 14px;
+  rotate: -6deg;
 }
 
-.banner p {
-  flex: 1 1 100%;
-  margin: 0;
-  font: 900 italic 22px var(--display);
+.mo-told {
+  position: relative;
+  display: inline-block;
+  font: 900 italic 18px var(--display);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mo-told i {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 50%;
+  height: 3px;
+  background: var(--warn);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+.calm .mo-told i {
+  transform: none;
+}
+
+.mo-tnew {
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, var(--g), var(--lime));
+  color: var(--black);
+  font: 900 italic 28px var(--display);
+  text-transform: uppercase;
+  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
+}
+
+.mo-next {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--black);
+  font: 800 12px var(--display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  rotate: -6deg;
+}
+
+.mo-tap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(28px + var(--safe-bottom));
+  padding: 12px;
+  font: 800 12px var(--display);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+/* Until it can be tapped away. The whole screen is the tap target, so keep the pointer. */
+.mo-tap:disabled {
+  cursor: pointer;
+}
+
+.mo-tap span {
+  animation: blink 1.2s steps(2, start) infinite;
+}
+
+.calm .mo-tap span {
+  animation: none;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Graduation: GRADUATED! is the hero, then the four stats at MAX, then GOOD JOB! */
+
+.gr-hero {
+  display: block;
+  font: 900 italic 64px / 0.9 var(--display);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-shadow: 5px 5px 0 var(--black), 9px 9px 0 var(--g);
+  white-space: nowrap;
+  rotate: -6deg;
+}
+
+.gr-stats {
+  display: grid;
+  gap: 12px;
+  max-width: 340px;
+  margin: 22px auto 0;
+}
+
+.gr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 16px;
+  border-radius: 999px;
+  background: var(--black);
+  border: 2px solid var(--line);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--g) 40%, transparent);
+  rotate: -4deg;
+}
+
+.gr-row b {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font: 900 italic 18px var(--display);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.gr-row span {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--black);
+  font: 900 italic 12px var(--display);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.banner button {
-  padding: 6px 14px;
+.gr-good {
+  display: inline-block;
+  margin-top: 22px;
+  padding: 4px 18px;
   border-radius: 999px;
-  background: var(--black);
-  color: var(--ink);
+  background: linear-gradient(100deg, var(--g), var(--lime));
+  color: var(--black);
+  font: 900 italic 30px var(--display);
+  text-transform: uppercase;
+  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
+  rotate: -6deg;
+}
+
+.gr-msg {
+  display: block;
+  margin-top: 14px;
+  font-weight: 700;
+  font-size: 16px;
+  rotate: -6deg;
+}
+
+/* The boom: a shockwave ring and sparks shooting out from the hit. */
+
+.shock {
+  position: fixed;
+  z-index: 55;
+  border-radius: 50%;
+  border: 12px solid var(--lime);
+  box-shadow: 0 0 18px var(--lime), inset 0 0 18px var(--lime);
+  translate: -50% -50%;
+  pointer-events: none;
+}
+
+.spark {
+  position: fixed;
+  z-index: 55;
+  width: 6px;
+  height: 42px;
+  margin-left: -3px;
+  border-radius: 3px;
+  background: linear-gradient(var(--ink), var(--lime));
+  box-shadow: 0 0 10px var(--lime);
+  transform-origin: 50% 0;
+  pointer-events: none;
 }
