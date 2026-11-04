@@ -24,11 +24,12 @@ Every piece is free and runs on Windows. The rule behind each pick: popular, wel
 | Build tool | Vite | Runs a dev server, bundles the app | Fast, simple config, standard for new React apps |
 | Installable app | vite-plugin-pwa | Adds the manifest + service worker | Makes it installable on iPhone and work offline |
 | Storage | IndexedDB via Dexie.js | Database inside the browser on the phone | Sturdier and bigger than localStorage; Dexie makes it easy to query |
-| Animation | Motion (Framer Motion) | Rank-up and graduation animations | Simple API for Persona-style screen effects |
-| Tests | Vitest + React Testing Library + fake-indexeddb | Runs our tests-first suite | Built for Vite; tests logic and screens; fake-indexeddb (dev-only) runs storage tests in Node and CI |
+| Animation | Motion (Framer Motion) | Every animation that reacts to touch: taps, screen changes, sheets, rank-ups | Simple API for Persona-style screen effects. A Lottie player may be added later for a few pre-drawn set pieces (not chosen yet) |
+| Fonts | Montserrat via @fontsource/montserrat | Heavy italic headings, self-hosted | Free (OFL), works offline; body text uses the iPhone system font |
+| Tests | Vitest + React Testing Library + user-event + jsdom + fake-indexeddb | Runs our tests-first suite | Built for Vite; tests logic and screens; jsdom and fake-indexeddb (dev-only) run screen and storage tests in Node and CI |
 | Code home | GitHub | Stores code + history | Free, needed for hosting |
 | Hosting | GitHub Pages | Serves the app at a public URL | Free, HTTPS (required for PWAs) |
-| CI + auto-deploy | GitHub Actions | Runs lint, tests and a type-checked build on every PR; deploys from main (step 7) | Free; a failing check blocks a bad merge or deploy |
+| CI + auto-deploy | GitHub Actions | Runs lint, tests and a type-checked build on every PR; deploys main to GitHub Pages; gives every PR its own preview link with its own database, so previews never touch real data | Free; a failing check blocks a bad merge or deploy |
 
 ## Architecture
 
@@ -115,8 +116,8 @@ Two kinds of data: the **library** ships inside the app as a read-only file; **y
 | Table | Where | Fields | Purpose |
 | --- | --- | --- | --- |
 | Habit (preset) | `habits.json` in the app | id, name, category, weights {stat: %} | The 100+ library; editing it needs no code change |
-| Habit (custom) | IndexedDB | same as preset + `custom: true`; id is `custom-` + a slug of the name | Habits you add; weights default to equal; names are unique; never deleted, so history always has their weights |
-| ActiveHabit | IndexedDB | habitId, addedOn, kind (daily or anytime) | Which habits are on your list, and how they show. Re-adding sets addedOn to the latest add. Removing only hides the habit; its history stays |
+| Habit (custom) | IndexedDB | same as preset + `custom: true`; id is `custom-` + a slug of the name | Habits you add. Name: 1–40 characters with a letter A–Z or a digit, unique among all habits (ignoring case, or giving the same slug). Weights follow the preset rule. Can't be edited once saved, and never deleted, so history always has their weights. |
+| ActiveHabit | IndexedDB | habitId, addedOn, kind (daily or anytime) | Which habits are on your list, and how they show. Re-adding sets addedOn to the latest add. Removing only hides the habit; its history stays. Switching daily/anytime keeps addedOn. Undo after a remove puts the row back exactly. |
 | Session | IndexedDB | id (auto-numbered = logged order), habitId, date (YYYY-MM-DD, phone-local), minutes | Every time block you log — the raw truth |
 | Award | IndexedDB | habitId, date, stat, points | What each habit has paid each stat that day (rule 5 diffs against this) |
 
@@ -141,16 +142,38 @@ A habit can override its category default. Library tests: every habit has a uniq
 
 ## Screens
 
+The app opens on a command menu: the words TODAY / LIBRARY / STATS / MY HABITS and a "Today's list" card. Tapping a word wipes diagonally into that section. Inside, a tilted strip under the date names all four sections: tap a name or swipe left/right (stops at Today and My habits). MENU returns to the menu with the last section marked.
+
 | Screen | What it shows | Actions |
 | --- | --- | --- |
-| Today | Daily checklist habits + anytime habits, minutes logged today per habit | Log, edit or delete today's sessions |
-| Stats | 4 stats: rank, title, progress bar to next rank (Max at 1000) | View only |
-| Library | 100+ presets by category, search | Add to your list (daily or anytime) |
-| My habits | Your active + custom habits | Add custom habit, set weights, remove from list (history stays) |
+| Menu | The four section words. "Today's list" card: the first 3 habits in Today order with minutes, "+N more", and "N OF M DAILY DONE" (hidden with no daily habits). An empty list says "Nothing on your list yet". | Tap a word, or the card for Today |
+| Today | Daily habits, then anytime, each A–Z, with minutes logged today. A habit with time today lights up; only daily habits get a tick. Below: the stat closest to its next rank ("COURAGE · NEXT: RANK 2" plus a bar; fewest points left, skipping maxed stats, ties in stat order). "Graduated" when all four are maxed. | Tap a habit to open the log sheet |
+| Log sheet | Habit name, weight chips ("Courage 70"), a big minutes number, quick bubbles 5/10/15/30/60 and CUSTOM, today's sessions with edit/delete, and LOG. After LOG the points float up ("+3 Courage") and the sheet stays open. Edits and deletes are silent. | Log, edit or delete today's sessions; close with ✕, a tap outside or a drag down |
+| Stats | 4 cards: stat, RANK N or MAX, title, 5 pips, a bar through the current rank, and total points. A GRADUATED pill when all four are at 1000. Like the games, it never shows how many points the next rank takes. | View only |
+| Library | Search, then six category chips (opens on Fitness; remembers the last chip while the app is open). Presets only, A–Z, with their stats biggest weight first. Search matches names in every category. | + then DAILY/ANYTIME to add. A habit already on your list shows "ON LIST · DAILY/ANYTIME" |
+| My habits | YOUR LIST in Today order with stats, a DAILY/ANYTIME tag and a CUSTOM tag. YOUR CUSTOM HABITS: custom habits off your list (hidden when none). An empty list links to the Library. | Tap the tag to switch kind; remove (a toast offers UNDO for 5 s, latest remove only); add a custom habit back; + ADD CUSTOM HABIT |
 
-- **Rank-up moment:** full-screen, stat name, old → new rank and title, tap to dismiss. Original look inspired by Persona; no Persona art, fonts or sounds.
+**New custom habit sheet:**
+
+- **Name:** required, 40 characters at most, needs a letter A–Z or a digit, and can't match any preset or custom name.
+- **Category:** required; picking one pre-selects its default stats.
+- **Stats and weights:** stat chips, then each weight with −/+ in steps of 10, from 10 to 100, and "Total N / 100". Turning a stat on or off resets to an even split: 100 / 50-50 / 40-30-30 / 30-30-20-20 (the first stat picked gets the spare 10).
+- **Show as:** DAILY (default) or ANYTIME.
+- **Save:** off until the total is 100. Creates the habit and adds it to your list.
+
+- **Rank-up moment:** full-screen, stat name, old → new rank and title, tap to dismiss. About 1.8 s; can be tapped away after 0.7 s; content in the middle of the screen. Original look inspired by Persona; no Persona art, fonts or sounds.
 - **Graduation moment:** when all four stats reach 1000, an animated "good job" message; the app then shows as Graduated. A single stat at 1000 gets the normal rank-up to Rank 5 and shows Max.
-- **Settings:** export all data to a file and import it back (free backup).
+- **Settings:** export all data to a file and import it back (free backup). Opened from a SETTINGS button on My habits.
+
+## Look and motion
+
+- **Mood:** original, inspired by Persona 3 Reload's "water and bubbles" feel, in green. No Persona/Atlus art, fonts or sounds.
+- **Palette (Neon Lime):** background #050807, depth #0D1F12, accent #39FF7A, highlight #C6FF3D, text #FFFFFF.
+- **Shapes:** rounded pills, glossy bubbles, wave lines, a big tilted date block, tilted staggered panels, inverted lime highlights with hard offset shadows, and a faint giant background word that drifts slowly sideways.
+- **Type:** headings in Montserrat heavy italic; body in the iPhone system font.
+- **Tilt:** each item tilts on its own, never a whole list. All content fits at 360, 390 and 430 px widths.
+- **Motion:** taps, screen changes, sheets and rank-ups all animate. Button taps pop glossy bubbles.
+- **Reduce Motion:** respects the iPhone setting. Screens change at once, there are no bubbles, and the background word stays still.
 
 ## Workflow
 
@@ -164,7 +187,7 @@ Build order:
 1. Scoring engine (pure logic, rules 1–8 + corrections) + its tests
 2. Habit library file + its validation tests
 3. Storage layer (Dexie)
-4. Screens: Today → Stats → Library → My habits
+4. Screens: Today → Library → Stats → My habits
 5. Rank-up and graduation animations
 6. Settings export/import
 7. PWA install + offline, then first deploy
