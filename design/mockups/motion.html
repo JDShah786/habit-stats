@@ -218,6 +218,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .ru-tap span { animation: blink 1.2s steps(2, start) infinite; }
 @keyframes blink { to { visibility: hidden; } }
 
+/* Graduation: same stage as the rank-up. Each item tilts on its own, never the whole list. */
+.gr-content { width: 100%; padding-inline: 16px; text-align: center; }
+.gr-label { display: inline-block; padding: 6px 20px; border-radius: 999px; background: linear-gradient(100deg, var(--g), var(--lime)); color: var(--black); font-size: 30px; letter-spacing: 0.04em; box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink); rotate: -6deg; }
+.gr-stats { display: grid; gap: 12px; max-width: 340px; margin: 22px auto 0; }
+.gr-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 16px; border-radius: 999px; background: var(--black); border: 2px solid var(--line); box-shadow: 4px 4px 0 color-mix(in srgb, var(--g) 40%, transparent); rotate: -4deg; }
+.gr-row b { flex: 1; min-width: 0; text-align: left; font-size: 18px; white-space: nowrap; }
+.gr-row span { flex: none; padding: 3px 9px; border-radius: 999px; background: var(--lime); color: var(--black); font-size: 12px; letter-spacing: 0.06em; }
+.gr-good { display: block; margin-top: 22px; line-height: 0.9; color: var(--lime); text-shadow: 6px 6px 0 var(--black), 9px 9px 0 var(--ink); white-space: nowrap; rotate: -6deg; }
+.gr-msg { display: block; margin-top: 14px; font: 700 16px var(--f-body); rotate: -6deg; }
+
 /* Mockup-only controls */
 .mock { position: absolute; right: 12px; bottom: 12px; z-index: 60; display: grid; justify-items: end; gap: 8px; }
 .mock > button { padding: 6px 12px; border-radius: 999px; background: var(--ink); color: var(--black); font: 800 11px var(--f-display); letter-spacing: 0.12em; box-shadow: 3px 3px 0 var(--g); }
@@ -307,9 +317,24 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
         <span class="ru-new d seq" id="ruNew">2</span>
       </div>
       <div class="ru-title"><span class="ru-told d seq" id="ruTOld">TIMID<i id="ruStrike"></i></span><span class="ru-tnew d seq" id="ruTNew">STEADY</span></div>
-      <span class="ru-next seq" id="ruNext">NEXT · BOLD AT 200</span>
+      <span class="ru-next seq" id="ruNext" hidden>MAXED · STOPS COUNTING</span>
     </div></div></div>
     <div class="ru-tap seq" id="ruTap"><span>TAP TO CONTINUE</span></div>
+  </div>
+
+  <!-- Graduation moment -->
+  <div class="ru" id="gr" hidden aria-live="assertive">
+    <div class="ru-bg"></div>
+    <div class="ru-stripes"><i></i><i></i><i></i></div>
+    <div class="ru-rise" id="grRise"></div>
+    <div class="ru-flash" id="grFlash"></div>
+    <div class="ru-shake" id="grShake"><div class="ru-exit" id="grExit"><div class="gr-content">
+      <span class="gr-label d seq" id="grLabel">GRADUATED!</span>
+      <div class="gr-stats" id="grStats"></div>
+      <span class="gr-good d seq" id="grGood">GOOD JOB.</span>
+      <span class="gr-msg seq" id="grMsg">These habits are part of you now.</span>
+    </div></div></div>
+    <div class="ru-tap seq" id="grTap"><span>TAP TO CONTINUE</span></div>
   </div>
 
   <div class="wipe" id="wipe" hidden><i></i><i></i><i></i></div>
@@ -320,6 +345,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
       <button id="mRM" aria-pressed="false">Reduce Motion: off</button>
       <button id="mRank">Play a rank-up</button>
       <button id="mMax">Play a max rank-up</button>
+      <button id="mGrad">Play graduation</button>
+      <button id="mBoth">Play two rank-ups, then graduation</button>
       <button id="mReset">Reset the demo</button>
     </div>
     <button id="mockBtn" aria-expanded="false">MOCKUP</button>
@@ -701,26 +728,39 @@ async function celebrateLog(id, prevMin, before, after) {
     const [x, y] = center(pill); burst(x, y, 16, 110)
     STATS.filter((s) => after[s] > before[s]).forEach((s, k) => floatText(`+${after[s] - before[s]} ${s.toUpperCase()}`, 40 + k * 18, y - 40 - k * 28, k * 0.15))
   }
-  const up = STATS.find((s) => rankOf(after[s]) > rankOf(before[s]))
-  if (up) { await wait(RM ? 400 : 950); rankUp(up, rankOf(before[up]), rankOf(after[up])) }
+  const events = STATS.filter((s) => rankOf(after[s]) > rankOf(before[s])).map((s) => ({ type: 'rankUp', stat: s, from: rankOf(before[s]), to: rankOf(after[s]) }))
+  const maxed = (t) => STATS.every((s) => t[s] >= 1000)
+  if (maxed(after) && !maxed(before)) events.push({ type: 'graduated' })
+  if (events.length) { await wait(RM ? 400 : 950); playEvents(events) }
 }
 
-// ---------- Rank-up ----------
-let ruReady = false
+// ---------- Rank-up and graduation ----------
+// One screen per event, in stat order, graduation last. Each waits for its tap-away.
+async function playEvents(events) {
+  for (const e of events) await (e.type === 'graduated' ? graduate() : rankUp(e.stat, e.from, e.to))
+}
+
+// The screen on show. Resolves its promise when tapped away.
+let current = null
+const showOverlay = (ru, exit, rise) => new Promise((resolve) => (current = { ru, exit, rise, ready: false, resolve }))
+const riseBubbles = (n) => Array.from({ length: n }, () => `<i class="rise" style="--l:${Math.random() * 100}%;--s:${10 + Math.random() * 34}px;--d:${4 + Math.random() * 4}s;--dl:${-Math.random() * 6}s"></i>`).join('')
+
 async function rankUp(stat, from, to) {
   const T = TITLES[stat], name = stat.toUpperCase()
   $('ruStat').textContent = name; $('ruStat').style.fontSize = Math.min(72, (stage.clientWidth - 60) / (name.length * 0.78)) + 'px'
   $('ruOld').textContent = from; $('ruNew').textContent = to
   $('ruTOld').firstChild.textContent = T[from - 1].toUpperCase(); $('ruTNew').textContent = T[to - 1].toUpperCase()
   $('ruLabel').textContent = to === 5 ? 'MAX RANK!' : 'RANK UP!'
-  $('ruNext').textContent = to < 5 ? `NEXT · ${T[to].toUpperCase()} AT ${RANKS[to]}` : 'MAXED · STOPS COUNTING'
+  // Like the games: no threshold or next title. Only a max rank-up gets a line.
+  $('ruNext').hidden = to < 5
   const ru = $('ru'), seq = ru.querySelectorAll('.seq'), stripes = ru.querySelectorAll('.ru-stripes i')
-  ru.hidden = false; ruReady = false
+  const done = showOverlay(ru, $('ruExit'), $('ruRise')), me = current
+  ru.hidden = false
   animate($('ruExit'), { x: 0, opacity: 1 }, { duration: 0 })
   if (RM) {
     animate([...seq, $('ruStrike')], { opacity: 1, scale: 1, x: 0, scaleX: 1 }, { duration: 0 })
     animate(stripes, { x: '0%' }, { duration: 0 })
-    await animate(ru, { opacity: [0, 1] }, { duration: 0.25 }); ruReady = true; return
+    await animate(ru, { opacity: [0, 1] }, { duration: 0.25 }); me.ready = true; return done
   }
   animate(ru, { opacity: 1 }, { duration: 0 })
   animate(seq, { opacity: 0 }, { duration: 0 })
@@ -741,20 +781,59 @@ async function rankUp(stat, from, to) {
   animate($('ruTNew'), { scale: [0, 1], rotate: [12, 0], opacity: [0, 1] }, { ...BOUNCY, delay: 1.3 })
   animate($('ruNext'), { y: [12, 0], opacity: [0, 1] }, { duration: 0.3, delay: 1.5 })
   animate($('ruTap'), { opacity: [0, 1] }, { duration: 0.3, delay: 1.8 })
-  $('ruRise').innerHTML = Array.from({ length: 14 }, () => `<i class="rise" style="--l:${Math.random() * 100}%;--s:${10 + Math.random() * 34}px;--d:${4 + Math.random() * 4}s;--dl:${-Math.random() * 6}s"></i>`).join('')
-  setTimeout(() => (ruReady = true), 700)
+  $('ruRise').innerHTML = riseBubbles(14)
+  setTimeout(() => (me.ready = true), 700)
+  return done
 }
-$('ru').addEventListener('click', async () => {
-  if (!ruReady) return; ruReady = false
-  const ru = $('ru')
-  if (RM) await animate(ru, { opacity: 0 }, { duration: 0.2 })
-  else {
-    animate($('ruExit'), { x: [0, 480], opacity: [1, 0] }, { duration: 0.3, ease: [0.6, 0, 1, 1] })
-    ru.querySelectorAll('.ru-stripes i').forEach((s, i) => animate(s, { x: i % 2 ? '-140%' : '140%' }, { duration: 0.3, ease: [0.6, 0, 1, 1], delay: i * 0.04 }))
-    await animate(ru, { opacity: 0 }, { duration: 0.25, delay: 0.18 })
+
+// Graduation: all four stats at MAX, then GOOD JOB. About 2.4 s; tap away after 1 s.
+async function graduate() {
+  $('grStats').innerHTML = STATS.map((s) => `<div class="gr-row seq"><b class="d">${s.toUpperCase()}</b><span class="d">MAX · ${TITLES[s][4].toUpperCase()}</span></div>`).join('')
+  const good = $('grGood'); good.style.fontSize = Math.min(76, (stage.clientWidth - 60) / (good.textContent.length * 0.72)) + 'px'
+  const gr = $('gr'), seq = gr.querySelectorAll('.seq'), rows = gr.querySelectorAll('.gr-row'), stripes = gr.querySelectorAll('.ru-stripes i')
+  const done = showOverlay(gr, $('grExit'), $('grRise')), me = current
+  gr.hidden = false
+  animate($('grExit'), { x: 0, opacity: 1 }, { duration: 0 })
+  if (RM) {
+    animate(seq, { opacity: 1, scale: 1, x: 0 }, { duration: 0 })
+    animate(stripes, { x: '0%' }, { duration: 0 })
+    await animate(gr, { opacity: [0, 1] }, { duration: 0.25 }); me.ready = true; return done
   }
-  ru.hidden = true; $('ruRise').innerHTML = ''
-})
+  animate(gr, { opacity: 1 }, { duration: 0 })
+  animate(seq, { opacity: 0 }, { duration: 0 })
+  animate($('grFlash'), { opacity: [0, 0.9, 0] }, { duration: 0.4 })
+  animate(gr.querySelector('.ru-bg'), { opacity: [0, 1] }, { duration: 0.15 })
+  stripes.forEach((s, i) => animate(s, { x: [i % 2 ? '140%' : '-140%', '0%'] }, { ...SNAP, delay: 0.05 + i * 0.07 }))
+  animate($('grLabel'), { scale: [0, 1], rotate: [-20, 0], opacity: [0, 1] }, { ...BOUNCY, delay: 0.2 })
+  rows.forEach((r, i) => animate(r, { x: [i % 2 ? 420 : -420, 0], opacity: [0, 1] }, { type: 'spring', stiffness: 300, damping: 24, delay: 0.4 + i * 0.12 }))
+  setTimeout(() => {
+    const [x, y] = center($('grStats')); burst(x, y, 24, 160)
+    animate($('grShake'), { x: [0, -9, 8, -5, 3, 0], y: [0, 5, -4, 2, 0] }, { duration: 0.35 })
+  }, 1000)
+  animate(good, { scale: [3.2, 1], rotate: [20, 0], opacity: [0, 1] }, { type: 'spring', stiffness: 380, damping: 16, delay: 1.2 })
+  setTimeout(() => { const [x, y] = center(good); burst(x, y, 36, 220) }, 1300)
+  animate($('grMsg'), { y: [12, 0], opacity: [0, 1] }, { duration: 0.35, delay: 1.7 })
+  animate($('grTap'), { opacity: [0, 1] }, { duration: 0.3, delay: 2.2 })
+  $('grRise').innerHTML = riseBubbles(24)
+  setTimeout(() => (me.ready = true), 1000)
+  return done
+}
+
+async function dismiss() {
+  const c = current
+  if (!c || !c.ready) return
+  c.ready = false
+  if (RM) await animate(c.ru, { opacity: 0 }, { duration: 0.2 })
+  else {
+    animate(c.exit, { x: [0, 480], opacity: [1, 0] }, { duration: 0.3, ease: [0.6, 0, 1, 1] })
+    c.ru.querySelectorAll('.ru-stripes i').forEach((s, i) => animate(s, { x: i % 2 ? '-140%' : '140%' }, { duration: 0.3, ease: [0.6, 0, 1, 1], delay: i * 0.04 }))
+    await animate(c.ru, { opacity: 0 }, { duration: 0.25, delay: 0.18 })
+  }
+  c.ru.hidden = true; c.rise.innerHTML = ''; current = null
+  c.resolve()
+}
+$('ru').addEventListener('click', dismiss)
+$('gr').addEventListener('click', dismiss)
 
 // ---------- Library ----------
 const CATS = [['fitness', 'FITNESS'], ['study', 'STUDY'], ['languages', 'LANGUAGES'], ['content-creation', 'CONTENT'], ['reading', 'READING'], ['art', 'ART']]
@@ -856,6 +935,11 @@ $('mockBtn').addEventListener('click', () => {
 $('mRM').addEventListener('click', () => setRM(!RM))
 $('mRank').addEventListener('click', () => { $('mockPanel').hidden = true; rankUp('charm', 2, 3) })
 $('mMax').addEventListener('click', () => { $('mockPanel').hidden = true; rankUp('intelligence', 4, 5) })
+$('mGrad').addEventListener('click', () => { $('mockPanel').hidden = true; graduate() })
+$('mBoth').addEventListener('click', () => {
+  $('mockPanel').hidden = true
+  playEvents([{ type: 'rankUp', stat: 'charm', from: 4, to: 5 }, { type: 'rankUp', stat: 'proficiency', from: 4, to: 5 }, { type: 'graduated' }])
+})
 $('mReset').addEventListener('click', async () => {
   $('mockPanel').hidden = true; seed(); renderAll()
   if (!$('secView').hidden) { menuBtns.forEach((b, j) => b.classList.toggle('sel', j === 0)); await transition(showMenu, -1) }
