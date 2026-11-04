@@ -890,10 +890,12 @@ async function pointsChart(tag, before, after) {
   await wait(480)
 
   // 2. One bead per point, one at a time, stat by stat (stat order), straight from the caption
-  // into the node. Big gains cap at 12 beads a stat, each then worth a share of the points.
+  // into the node. The more points, the faster they stream: the gap between beads shrinks
+  // with log2 of the count (2 → 110 ms, 8 → 37 ms, 32 → 22 ms). A safety cap of 40 beads a
+  // stat (each then worth a share) only matters for extreme logs.
   const [sx, sy] = center($('pcTag'))
   const grow = { ...from }, rankNow = Object.fromEntries(STATS.map((s) => [s, rankOf(before[s])]))
-  const MAX_BEADS = 12
+  const MAX_BEADS = 40
   const flights = []
   let launch = 0
   for (const s of gained) {
@@ -904,7 +906,7 @@ async function pointsChart(tag, before, after) {
     for (let i = 0; i < beads; i++) {
       const value = share(i)
       flights.push(flyBead(s, launch, () => land(s, (landed += value))))
-      launch += beads > 6 ? 70 : 110
+      launch += 110 / Math.max(1, Math.log2(beads))
     }
     launch += 140 // a beat between stats
   }
