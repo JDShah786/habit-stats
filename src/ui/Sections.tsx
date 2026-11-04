@@ -4,7 +4,7 @@
 import { animate, motion, useMotionValue, useMotionValueEvent, type PanInfo } from 'motion/react'
 import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { GhostWord } from './Decor'
-import { SECTIONS } from './motionKit'
+import { burst, SECTIONS, tapPoint } from './motionKit'
 
 const TRACK_SPRING = { type: 'spring', stiffness: 380, damping: 38 } as const
 const LAST = SECTIONS.length - 1
@@ -82,9 +82,16 @@ export function Sections({ index, reduced, onIndex, onMenu, renderSection }: Pro
   return (
     <div className="sections-view">
       <GhostWord word={SECTIONS[index].toUpperCase()} parallaxRef={parallax} />
-      <button className="menu-btn" onClick={onMenu}>
+      <motion.button
+        className="menu-btn"
+        whileTap={{ scale: 0.93 }}
+        onClick={(e) => {
+          if (!reduced) burst(tapPoint(e), 8, 50)
+          onMenu()
+        }}
+      >
         Menu
-      </button>
+      </motion.button>
       <nav className="strip" aria-label="Sections" ref={strip}>
         <span className="cursor" ref={cursor} aria-hidden="true" />
         {SECTIONS.map((name, i) => (
