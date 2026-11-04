@@ -11,6 +11,8 @@ import { Library } from './Library'
 import { Menu } from './Menu'
 import { moments, type Moment } from './moments'
 import { MyHabits } from './MyHabits'
+import { PointsOverlay } from './PointsOverlay'
+import { gains, type Logged } from './pointsChart'
 import { RankMoment } from './RankMoment'
 import { usePrefersReducedMotion } from './reducedMotion'
 import { Sections } from './Sections'
@@ -44,18 +46,21 @@ export function App({ store, now = () => new Date() }: Props) {
   // Rank-up and graduation moments waiting to play; the first one is on screen.
   const [queue, setQueue] = useState<{ id: number; moment: Moment }[]>([])
   const nextMomentId = useRef(0)
-  // A change's moments wait a beat (0.95 s; 0.4 s with Reduce Motion) so its floating points
-  // show first. Then they play one at a time.
+  const play = (events: RankEvent[]) => {
+    const items = moments(events).map((moment) => ({ id: nextMomentId.current++, moment }))
+    if (items.length) setQueue((q) => [...q, ...items])
+  }
+  // An edit's or delete's moments wait a beat (0.95 s; 0.4 s with Reduce Motion), then play
+  // one at a time.
   const announce = (events: RankEvent[]) => {
-    const next = moments(events)
-    if (next.length === 0) return
-    setTimeout(
-      () => {
-        const items = next.map((moment) => ({ id: nextMomentId.current++, moment }))
-        setQueue((q) => [...q, ...items])
-      },
-      reduced ? 400 : 950,
-    )
+    if (moments(events).length) setTimeout(() => play(events), reduced ? 400 : 950)
+  }
+  // A LOG that earned points shows the points chart first; its moments play once it closes.
+  const [chart, setChart] = useState<(Logged & { id: number }) | null>(null)
+  const nextChartId = useRef(0)
+  const logged = (log: Logged) => {
+    if (gains(log.before, log.after).length === 0) announce(log.events)
+    else setChart({ ...log, id: nextChartId.current++ })
   }
 
   // Swap screens behind the wipe, or at once with Reduce Motion.
@@ -88,7 +93,7 @@ export function App({ store, now = () => new Date() }: Props) {
             onIndex={setIndex}
             onMenu={toMenu}
             renderSection={(i) => {
-              if (i === 0) return <Today store={store} dataVersion={dataVersion} onDataChange={dataChanged} onEvents={announce} onGoToLibrary={() => setIndex(1)} />
+              if (i === 0) return <Today store={store} dataVersion={dataVersion} onDataChange={dataChanged} onEvents={announce} onLogged={logged} onGoToLibrary={() => setIndex(1)} />
               if (i === 1)
                 return (
                   <Library
@@ -110,6 +115,19 @@ export function App({ store, now = () => new Date() }: Props) {
                   onGoToLibrary={() => setIndex(1)}
                 />
               )
+            }}
+          />
+        )}
+        {chart && (
+          <PointsOverlay
+            key={chart.id}
+            caption={chart.caption}
+            before={chart.before}
+            after={chart.after}
+            reduced={reduced}
+            onDone={() => {
+              setChart(null)
+              play(chart.events)
             }}
           />
         )}

@@ -157,6 +157,13 @@ button:disabled {
   animation: none;
 }
 
+/* While the points chart or a rank-up covers the screen, the ambient loops under it pause:
+   unseen work, saved. */
+body:has(.pc, .moment) .bub,
+body:has(.pc, .moment) .marquee {
+  animation-play-state: paused;
+}
+
 /* Date block */
 
 .date {
@@ -1337,25 +1344,6 @@ input:focus {
   box-shadow: 6px 6px 0 var(--black), 8px 8px 0 var(--ink);
 }
 
-/* "+3 COURAGE" floats up in the space right of the minutes. */
-.gains {
-  position: absolute;
-  right: 4px;
-  bottom: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  pointer-events: none;
-}
-
-.gains span {
-  font: 900 italic 18px var(--display);
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--lime);
-  text-shadow: 3px 3px 0 var(--black);
-}
-
 .error {
   color: var(--warn);
   font-weight: 700;
@@ -1746,4 +1734,169 @@ input:focus {
   box-shadow: 0 0 10px var(--lime);
   transform-origin: 50% 0;
   pointer-events: none;
+}
+
+/* Points chart after LOG (portal into <body>): a dark dim, a cross, and the diamond radar on
+   top. Above the log sheet, below the rank-up moments. No blur or filters: they repaint every
+   frame and stutter on phones. */
+
+.pc {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  max-width: 480px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.pc-dim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.9);
+}
+
+.pc-stage {
+  position: relative;
+  width: min(340px, 90%);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.pc-chart {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.pc-cross,
+.pc-node,
+.pc-tally {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.pc-cross-arms {
+  fill: var(--black);
+  stroke: var(--g);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.pc-cross-shadow {
+  fill: color-mix(in srgb, var(--g) 30%, transparent);
+}
+
+.pc-ringline {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.16);
+  stroke-width: 1.5;
+}
+
+.pc-ringline.top {
+  stroke: color-mix(in srgb, var(--g) 55%, transparent);
+  stroke-width: 2;
+}
+
+.pc-axis {
+  stroke: rgb(255 255 255 / 0.22);
+  stroke-width: 1.5;
+}
+
+/* The glow is a wide faint stroke under the shape, not a filter. */
+.pc-glow {
+  fill: none;
+  stroke: color-mix(in srgb, var(--g) 35%, transparent);
+  stroke-width: 12;
+  stroke-linejoin: round;
+}
+
+.pc-shape {
+  fill: color-mix(in srgb, var(--g) 38%, transparent);
+  stroke: var(--lime);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.pc-node circle {
+  fill: var(--black);
+  stroke: var(--g);
+  stroke-width: 3;
+}
+
+.pc-node.max circle {
+  fill: var(--lime);
+  stroke: var(--ink);
+}
+
+.pc-rank {
+  fill: var(--ink);
+  font: 900 italic 14px var(--display);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.pc-node.max .pc-rank {
+  fill: var(--black);
+  font-size: 10px;
+}
+
+.pc-label {
+  fill: var(--ink);
+  font: 900 italic 12px var(--display);
+  letter-spacing: 0.08em;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--black);
+  stroke-width: 4px;
+}
+
+/* The running "+N" beside each node. */
+.pc-tally {
+  fill: var(--lime);
+  font: 900 italic 15px var(--display);
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: var(--black);
+  stroke-width: 5px;
+}
+
+.pc-ring {
+  fill: none;
+  stroke: var(--lime);
+  stroke-width: 4;
+}
+
+.pc-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -14%;
+  translate: -50% 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--black);
+  font: 900 italic 13px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  rotate: -4deg;
+  box-shadow: 3px 3px 0 var(--black), 5px 5px 0 var(--ink);
+}
+
+/* One bead per point: a small glossy orb flying from the caption into its stat. */
+.pc-bead {
+  position: fixed;
+  z-index: 46;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 32% 30%, var(--ink) 0 18%, var(--lime) 34%, var(--g) 75%);
+  box-shadow: 0 0 8px var(--g);
 }

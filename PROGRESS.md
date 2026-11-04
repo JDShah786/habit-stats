@@ -6,7 +6,7 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 - [x] 2. Habit library file + validation tests — PR #4, merged 2026-10-27
 - [x] 3. Storage layer (Dexie) — PR #6, merged 2026-10-27
 - [x] 4. Screens: Today → Library → Stats → My habits — PRs #9, #11–#15, merged 2026-11-04
-- [ ] 5. Rank-up and graduation animations — 5a PR #17 merged 2026-11-04; 5b (points flying into a stat chart) next
+- [x] 5. Rank-up and graduation animations + points chart — PRs #17, #18, merged 2026-11-04
 - [ ] 6. Settings export/import
 - [ ] 7. PWA install + offline (deploy already runs from main, see decisions log)
 
@@ -102,3 +102,7 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-11-04 | 5 | Rank-up and graduation are dialogs named "Rank up" / "Graduated"; their text is read out. TAP TO CONTINUE is a real button (Enter/Space), disabled until the moment can be tapped away; Escape or a tap anywhere also taps it away. | Works with a keyboard and a screen reader, not just touch. | No |
 | 2026-11-04 | 5 | A change's moments wait ~0.95 s (0.4 s with Reduce Motion) so the floating points show first. Same delay after an edit. | Matches the approved prototype. | No |
 | 2026-11-04 | 5 | The log sheet stays open under the moment; after the last one is tapped away you're back in the sheet. | Same as "the sheet stays open after LOG". | No |
+| 2026-11-04 | 5 | After LOG (when it earned points) a points chart comes up over the log sheet: a dark dim, a black cross with lime edges, and a diamond radar of the four stats on top (rings = ranks 1-5; each corner = rank plus progress, never point thresholds). Nodes sit at the cross's arm ends, sized by rank, MAX when maxed. Caption: the habit and the minutes just logged. Replaces the floating "+3 Courage" text. | Hamid's call: points visibly go onto the stats, like the games; original shapes (cross, diamond). | No |
+| 2026-11-04 | 5 | One bead per point flies straight from the caption into its stat, one at a time, stat by stat in stat order. The more points, the faster they stream: the gap between beads is 110 ms / log2(beads). A safety cap of 40 beads a stat only matters for extreme logs. Each landing ticks a "+N" tally, pulses the node and grows the shape a step; the bead that crosses a rank swells the node with a ring burst. | Hamid: "one by one, similar to how the game is"; big logs stay quick. | No |
+| 2026-11-04 | 5 | The chart closes ~0.9 s after the last bead; a tap (after 0.4 s) or Escape skips it. Rank-up and graduation play after it closes (no extra wait). It doesn't come up for edits or deletes, or for a log that earns nothing; their rank-ups keep the ~0.95 s wait. Reduce Motion: no beads; the final state shows ~1.4 s, then fades. Screen readers hear "Points earned" with "+3 Courage" etc. | One story per log: points, then any rank-up. | No |
+| 2026-11-04 | 5 | Smoother animation: no full-screen backdrop blur or SVG filters (they repaint every frame on phones); ambient loops pause under the chart and the rank-up screens. The prototype's swipe measures layout once and decides direction from how far the track moved (a pointercancel reporting x = 0 made swipe-back go forward; the app's Motion drag was already right). | Hamid noticed lag and the swipe bug in the prototype. | No |
