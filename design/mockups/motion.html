@@ -33,6 +33,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 @keyframes bob { to { transform: translateY(-22px); } }
 .stripe { position: absolute; left: -60px; right: -60px; height: 120px; background: linear-gradient(90deg, var(--g), var(--lime)); opacity: 0.1; transform: rotate(-14deg); pointer-events: none; }
 .rm .bub, .rm .wave svg, .rm .ru-stripes, .rm .rise { animation: none !important; }
+/* While an overlay covers the screen, the ambient loops under it pause: unseen work, saved. */
+.busy .bub, .busy .wave svg, .busy .marquee { animation-play-state: paused; }
 
 /* Date block */
 .date { position: absolute; left: 18px; top: 18px; transform: rotate(-6deg); transform-origin: left top; z-index: 3; pointer-events: none; }
@@ -241,18 +243,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 /* Points chart: after LOG, a dimmed screen, a small tilted parallelogram plate as an accent,
    and a bigger diamond radar over it. "+3" chips fly from the plate's tag into each stat. */
 .pc { position: absolute; inset: 0; z-index: 45; display: grid; place-items: center; cursor: pointer; }
-.pc-dim { position: absolute; inset: 0; background: rgb(0 0 0 / 0.84); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+/* A plain dark dim: no backdrop blur (blurring a full screen every frame is costly on iPhone). */
+.pc-dim { position: absolute; inset: 0; background: rgb(0 0 0 / 0.9); }
 .pc-stage { position: relative; width: min(340px, 90%); aspect-ratio: 1; display: grid; place-items: center; }
-/* The plate: outer box slides in; the inner shape carries the tilt and skew (Motion's x would
-   overwrite a transform on the same element). */
-.pc-plate { position: absolute; left: 12%; right: 12%; top: 42%; height: 16%; }
-.pc-plate i { position: absolute; inset: 0; transform: rotate(-6deg) skewX(-18deg); background: linear-gradient(100deg, color-mix(in srgb, var(--g) 30%, var(--depth)), var(--black) 85%); border: 3px solid var(--g); box-shadow: 8px 8px 0 color-mix(in srgb, var(--g) 35%, transparent); }
+/* The cross behind the diamond: black arms with a lime edge, each ending behind a stat node. */
+.pc-chart .cross { fill: var(--black); stroke: var(--g); stroke-width: 3; stroke-linejoin: round; }
+.pc-chart .cross-shadow { fill: color-mix(in srgb, var(--g) 30%, transparent); }
+.pc-chart .cross-group { transform-box: fill-box; transform-origin: center; }
 .pc-tag { position: absolute; left: 50%; bottom: -14%; translate: -50% 0; padding: 4px 14px; border-radius: 999px; background: var(--lime); color: var(--black); font-size: 13px; letter-spacing: 0.06em; white-space: nowrap; rotate: -4deg; box-shadow: 3px 3px 0 var(--black), 5px 5px 0 var(--ink); }
 .pc-chart { position: relative; width: 100%; height: 100%; overflow: visible; }
 .pc-chart .ring { fill: none; stroke: rgb(255 255 255 / 0.16); stroke-width: 1.5; }
 .pc-chart .ring.top { stroke: color-mix(in srgb, var(--g) 55%, transparent); stroke-width: 2; }
 .pc-chart .axis { stroke: rgb(255 255 255 / 0.22); stroke-width: 1.5; }
-.pc-chart .shape { fill: color-mix(in srgb, var(--g) 38%, transparent); stroke: var(--lime); stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--g) 70%, transparent)); }
+.pc-chart .shape { fill: color-mix(in srgb, var(--g) 38%, transparent); stroke: var(--lime); stroke-width: 3; stroke-linejoin: round; }
+/* The glow: a wide faint stroke under the shape, not a filter (a filter repaints every frame). */
+.pc-chart .glow { fill: none; stroke: color-mix(in srgb, var(--g) 35%, transparent); stroke-width: 12; stroke-linejoin: round; }
 .pc-chart .node circle { fill: var(--black); stroke: var(--g); stroke-width: 3; }
 .pc-chart .node.max circle { fill: var(--lime); stroke: var(--ink); }
 .pc-chart .node text { fill: var(--ink); font: 900 italic 14px var(--f-display); text-anchor: middle; dominant-baseline: central; }
@@ -360,7 +365,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
   <div class="pc" id="pc" hidden>
     <div class="pc-dim" id="pcDim"></div>
     <div class="pc-stage">
-      <div class="pc-plate" id="pcPlate"><i></i></div>
       <svg class="pc-chart" id="pcChart" viewBox="0 0 300 300" aria-hidden="true"></svg>
       <span class="pc-tag d" id="pcTag">BOXING · 25 MIN</span>
     </div>
@@ -557,7 +561,7 @@ function showMenu() {
 }
 function showSections(i) {
   $('menuView').hidden = true; $('secView').hidden = false
-  idx = i; trackAnim?.stop(); setTrack(-i * W())
+  idx = i; trackAnim?.stop(); measure(); setTrack(-i * W())
   setGhost($('ghostWord'), SECTIONS[i])
   enterPane(i)
 }
@@ -574,15 +578,20 @@ setGhost($('menuGhost'), 'HABITS')
 // ---------- Swipe between sections ----------
 const track = $('track'), panes = [...track.children], tabs = [...$('tabs').querySelectorAll('button')]
 let idx = 0, tx = 0, trackAnim = null, drag = null, suppressClick = false
-const W = () => $('panes').clientWidth
+// Measured once (and on resize), never mid-swipe: reading layout right after writing styles
+// forces the browser to re-lay-out every frame, which made swiping stutter.
+let paneW = 0, tabBox = [], litTab = -1
+function measure() { paneW = $('panes').clientWidth; tabBox = tabs.map((t) => [t.offsetLeft, t.offsetWidth]) }
+const W = () => paneW
+const cursorEl = $('cursor'), ghostPar = document.querySelector('.ghost-par')
 function setTrack(v) {
   tx = v; track.style.transform = `translate3d(${v}px,0,0)`
-  const p = Math.max(0, Math.min(3, -v / W())), i0 = Math.floor(p), f = p - i0, i1 = Math.min(i0 + 1, 3)
-  const L = tabs[i0].offsetLeft + (tabs[i1].offsetLeft - tabs[i0].offsetLeft) * f
-  const Wd = tabs[i0].offsetWidth + (tabs[i1].offsetWidth - tabs[i0].offsetWidth) * f
-  const c = $('cursor'); c.style.left = L + 'px'; c.style.width = Wd + 'px'
-  tabs.forEach((t, j) => t.classList.toggle('on', j === Math.round(p)))
-  document.querySelector('.ghost-par').style.transform = `translate3d(${(-v / W() - idx) * -80}px,0,0)`
+  const p = Math.max(0, Math.min(3, -v / paneW)), i0 = Math.floor(p), f = p - i0, i1 = Math.min(i0 + 1, 3)
+  cursorEl.style.left = tabBox[i0][0] + (tabBox[i1][0] - tabBox[i0][0]) * f + 'px'
+  cursorEl.style.width = tabBox[i0][1] + (tabBox[i1][1] - tabBox[i0][1]) * f + 'px'
+  const lit = Math.round(p)
+  if (lit !== litTab) { tabs.forEach((t, j) => t.classList.toggle('on', j === lit)); litTab = lit }
+  ghostPar.style.transform = `translate3d(${(-v / paneW - idx) * -80}px,0,0)`
 }
 function goTo(i, velocity = 0) {
   const changed = i !== idx; idx = i
@@ -628,7 +637,9 @@ function endDrag(e) {
   suppressClick = true; setTimeout(() => (suppressClick = false), 0)
   const [ta, xa] = d.hist[0], [tb, xb] = d.hist[d.hist.length - 1]
   const vel = tb > ta ? ((xb - xa) / (tb - ta)) * 1000 : 0
-  const dx = e.clientX - d.x0
+  // How far the track really moved. Not e.clientX: a drag that ends in pointercancel (phones
+  // do this) can report 0 there, which turned every swipe back into a swipe forward.
+  const dx = tx - d.t0
   let i = idx
   if (dx < -W() * 0.2 || vel < -500) i++
   else if (dx > W() * 0.2 || vel > 500) i--
@@ -636,7 +647,7 @@ function endDrag(e) {
 }
 track.addEventListener('pointerup', endDrag); track.addEventListener('pointercancel', endDrag)
 track.addEventListener('click', (e) => { if (suppressClick) { e.stopPropagation(); e.preventDefault() } }, true)
-addEventListener('resize', () => setTrack(-idx * W()))
+addEventListener('resize', () => { if (!$('secView').hidden) { measure(); setTrack(-idx * W()) } })
 
 // ---------- Today ----------
 function renderToday() {
@@ -802,11 +813,20 @@ async function pointsChart(tag, before, after) {
   const el = (name, attrs, parent = svg) => { const e = document.createElementNS(NS, name); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); parent.appendChild(e); return e }
   svg.innerHTML = ''
   $('pcTag').textContent = tag.toUpperCase()
+  // The cross behind it all: black arms with a lime edge, each ending behind a stat node.
+  const AW = 22, AL = R + 24
+  const crossPoints = [[-AW, -AL], [AW, -AL], [AW, -AW], [AL, -AW], [AL, AW], [AW, AW], [AW, AL], [-AW, AL], [-AW, AW], [-AL, AW], [-AL, -AW], [-AW, -AW]]
+    .map(([x, y]) => `${CX + x},${CX + y}`).join(' ')
+  const crossG = el('g', { class: 'cross-group' })
+  el('polygon', { class: 'cross-shadow', points: crossPoints, transform: 'translate(7 7)' }, crossG)
+  el('polygon', { class: 'cross', points: crossPoints }, crossG)
   for (let k = 1; k <= 5; k++) el('polygon', { class: k === 5 ? 'ring top' : 'ring', points: STATS.map((s) => at(s, k).join(',')).join(' ') })
   for (const s of STATS) { const [x, y] = at(s, 5); el('line', { class: 'axis', x1: CX, y1: CX, x2: x, y2: y }) }
   const from = Object.fromEntries(STATS.map((s) => [s, level(before[s])]))
   const to = Object.fromEntries(STATS.map((s) => [s, level(after[s])]))
+  const glow = el('polygon', { class: 'glow', points: shapePoints(from) })
   const shape = el('polygon', { class: 'shape', points: shapePoints(from) })
+  const drawShape = (levels) => { const p = shapePoints(levels); glow.setAttribute('points', p); shape.setAttribute('points', p) }
   const nodes = {}
   for (const s of STATS) {
     const [x, y] = at(s, 5), rank = rankOf(before[s])
@@ -819,7 +839,7 @@ async function pointsChart(tag, before, after) {
     nodes[s] = { g, c, t }
   }
 
-  pc.hidden = false
+  pc.hidden = false; stage.classList.add('busy')
   const done = new Promise((resolve) => (pcDone = resolve))
   let skippable = false
   setTimeout(() => (skippable = true), 400)
@@ -827,7 +847,7 @@ async function pointsChart(tag, before, after) {
     if (!pcDone) return
     const finish = pcDone; pcDone = null
     await animate(pc, { opacity: 0 }, { duration: 0.22 })
-    pc.hidden = true; animate(pc, { opacity: 1 }, { duration: 0 }); pc.querySelectorAll('.pc-chip').forEach((c) => c.remove())
+    pc.hidden = true; stage.classList.remove('busy'); animate(pc, { opacity: 1 }, { duration: 0 }); stage.querySelectorAll('.pc-chip').forEach((c) => c.remove())
     finish()
   }
   pc.onclick = () => skippable && close()
@@ -842,16 +862,16 @@ async function pointsChart(tag, before, after) {
   }
 
   if (RM) {
-    shape.setAttribute('points', shapePoints(to)); gained.forEach(settle)
+    drawShape(to); gained.forEach(settle)
     await animate(pc, { opacity: [0, 1] }, { duration: 0.2 })
     setTimeout(close, 1400)
     return done
   }
 
-  // 1. In: the dim, the plate slides in, the diamond spins up over it.
+  // 1. In: the dim, the cross snaps open, the diamond spins up over it.
   animate($('pcDim'), { opacity: [0, 1] }, { duration: 0.2 })
-  animate($('pcPlate'), { x: [-260, 0], opacity: [0, 1] }, { ...SNAP, delay: 0.04 })
-  animate(svg, { scale: [0.3, 1], rotate: [-90, 0], opacity: [0, 1] }, { type: 'spring', stiffness: 300, damping: 22, delay: 0.1 })
+  animate(crossG, { scale: [0, 1], rotate: [-45, 0] }, { type: 'spring', stiffness: 340, damping: 20, delay: 0.04 })
+  animate(svg, { scale: [0.5, 1], rotate: [-60, 0], opacity: [0, 1] }, { type: 'spring', stiffness: 300, damping: 22, delay: 0.1 })
   animate($('pcTag'), { y: [30, 0], opacity: [0, 1] }, { ...SNAP, delay: 0.2 })
   await wait(480)
 
@@ -860,15 +880,25 @@ async function pointsChart(tag, before, after) {
   const grow = { ...from }
   await Promise.all(gained.map(async (s, k) => {
     await wait(k * 140)
+    // The chip sits on its node and starts out at the caption. It swirls in: it travels toward
+    // the node while orbiting in a small circle (alternating direction per chip) that opens up,
+    // then tightens to nothing as it lands. The orbit stays small so the chip stays on screen.
+    const [tx, ty] = center(nodes[s].c), ox = sx - tx, oy = sy - ty
     const chip = document.createElement('div'); chip.className = 'pc-chip d'
-    chip.textContent = `+${after[s] - before[s]}`; chip.style.left = sx + 'px'; chip.style.top = sy + 'px'
-    stage.appendChild(chip)
-    const [tx, ty] = center(nodes[s].c), dx = tx - sx, dy = ty - sy
-    await animate(chip, { x: [0, dx * 0.45, dx], y: [0, dy * 0.45 - 60, dy], scale: [0.6, 1.25, 0.5] }, { duration: 0.5, ease: [0.3, 0, 0.4, 1] })
+    chip.textContent = `+${after[s] - before[s]}`; chip.style.left = tx + 'px'; chip.style.top = ty + 'px'
+    const turn = (k % 2 ? -1 : 1) * Math.PI * 2 * 2.2
+    const place = (p) => {
+      const travel = 1 - (1 - p) ** 2.2
+      const a = turn * p, orbit = 56 * (1 - p) * Math.min(1, p * 4)
+      const x = ox * (1 - travel) + Math.cos(a) * orbit, y = oy * (1 - travel) + Math.sin(a) * orbit
+      chip.style.transform = `translate3d(${x}px,${y}px,0) scale(${1.2 - 0.7 * p})`
+    }
+    place(0); stage.appendChild(chip)
+    await animate(0, 1, { duration: 0.85, ease: 'linear', onUpdate: place })
     chip.remove()
     // 3. It lands: the node pulses, the shape grows to the new level.
     burst(tx, ty, 10, 46)
-    animate(0, 1, { duration: 0.45, ease: [0.2, 0.8, 0.2, 1], onUpdate: (p) => { grow[s] = from[s] + (to[s] - from[s]) * p; shape.setAttribute('points', shapePoints(grow)) } })
+    animate(0, 1, { duration: 0.45, ease: [0.2, 0.8, 0.2, 1], onUpdate: (p) => { grow[s] = from[s] + (to[s] - from[s]) * p; drawShape(grow) } })
     const startR = nodeRadius(rankOf(before[s]))
     if (settle(s)) {
       // 4. A rank-up: the node swells to its new size with a ring burst.
@@ -896,7 +926,10 @@ async function playEvents(events) {
 
 // The screen on show. Resolves its promise when tapped away.
 let current = null
-const showOverlay = (ru, exit, rise) => new Promise((resolve) => (current = { ru, exit, rise, ready: false, resolve }))
+const showOverlay = (ru, exit, rise) => {
+  stage.classList.add('busy')
+  return new Promise((resolve) => (current = { ru, exit, rise, ready: false, resolve }))
+}
 const riseBubbles = (n) => Array.from({ length: n }, () => `<i class="rise" style="--l:${Math.random() * 100}%;--s:${10 + Math.random() * 34}px;--d:${4 + Math.random() * 4}s;--dl:${-Math.random() * 6}s"></i>`).join('')
 
 async function rankUp(stat, from, to) {
@@ -1013,7 +1046,7 @@ async function dismiss() {
     c.ru.querySelectorAll('.ru-stripes i').forEach((s, i) => animate(s, { x: i % 2 ? '-140%' : '140%' }, { duration: 0.3, ease: [0.6, 0, 1, 1], delay: i * 0.04 }))
     await animate(c.ru, { opacity: 0 }, { duration: 0.25, delay: 0.18 })
   }
-  c.ru.hidden = true; c.rise.innerHTML = ''; current = null
+  c.ru.hidden = true; c.rise.innerHTML = ''; current = null; stage.classList.remove('busy')
   c.resolve()
 }
 $('ru').addEventListener('click', dismiss)
