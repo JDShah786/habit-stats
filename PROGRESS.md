@@ -6,7 +6,7 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 - [x] 2. Habit library file + validation tests — PR #4, merged 2026-10-27
 - [x] 3. Storage layer (Dexie) — PR #6, merged 2026-10-27
 - [x] 4. Screens: Today → Library → Stats → My habits — PRs #9, #11–#15, merged 2026-11-04
-- [x] 5. Rank-up and graduation animations — PR #17, merged 2026-11-04
+- [ ] 5. Rank-up and graduation animations — 5a PR #17 merged 2026-11-04; 5b (points flying into a stat chart) next
 - [ ] 6. Settings export/import
 - [ ] 7. PWA install + offline (deploy already runs from main, see decisions log)
 
