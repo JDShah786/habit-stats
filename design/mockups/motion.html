@@ -238,6 +238,30 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
 .gr-good { display: inline-block; margin-top: 22px; padding: 4px 18px; border-radius: 999px; background: linear-gradient(100deg, var(--g), var(--lime)); color: var(--black); font-size: 30px; box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink); rotate: -6deg; }
 .gr-msg { display: block; margin-top: 14px; font: 700 16px var(--f-body); rotate: -6deg; }
 
+/* Points chart: after LOG, a dimmed screen, a small tilted parallelogram plate as an accent,
+   and a bigger diamond radar over it. "+3" chips fly from the plate's tag into each stat. */
+.pc { position: absolute; inset: 0; z-index: 45; display: grid; place-items: center; cursor: pointer; }
+.pc-dim { position: absolute; inset: 0; background: rgb(0 0 0 / 0.84); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.pc-stage { position: relative; width: min(340px, 90%); aspect-ratio: 1; display: grid; place-items: center; }
+/* The plate: outer box slides in; the inner shape carries the tilt and skew (Motion's x would
+   overwrite a transform on the same element). */
+.pc-plate { position: absolute; left: 12%; right: 12%; top: 42%; height: 16%; }
+.pc-plate i { position: absolute; inset: 0; transform: rotate(-6deg) skewX(-18deg); background: linear-gradient(100deg, color-mix(in srgb, var(--g) 30%, var(--depth)), var(--black) 85%); border: 3px solid var(--g); box-shadow: 8px 8px 0 color-mix(in srgb, var(--g) 35%, transparent); }
+.pc-tag { position: absolute; left: 50%; bottom: -14%; translate: -50% 0; padding: 4px 14px; border-radius: 999px; background: var(--lime); color: var(--black); font-size: 13px; letter-spacing: 0.06em; white-space: nowrap; rotate: -4deg; box-shadow: 3px 3px 0 var(--black), 5px 5px 0 var(--ink); }
+.pc-chart { position: relative; width: 100%; height: 100%; overflow: visible; }
+.pc-chart .ring { fill: none; stroke: rgb(255 255 255 / 0.16); stroke-width: 1.5; }
+.pc-chart .ring.top { stroke: color-mix(in srgb, var(--g) 55%, transparent); stroke-width: 2; }
+.pc-chart .axis { stroke: rgb(255 255 255 / 0.22); stroke-width: 1.5; }
+.pc-chart .shape { fill: color-mix(in srgb, var(--g) 38%, transparent); stroke: var(--lime); stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--g) 70%, transparent)); }
+.pc-chart .node circle { fill: var(--black); stroke: var(--g); stroke-width: 3; }
+.pc-chart .node.max circle { fill: var(--lime); stroke: var(--ink); }
+.pc-chart .node text { fill: var(--ink); font: 900 italic 14px var(--f-display); text-anchor: middle; dominant-baseline: central; }
+.pc-chart .node.max text { fill: var(--black); font-size: 10px; }
+.pc-chart .node, .pc-chart .burst { transform-box: fill-box; transform-origin: center; }
+.pc-chart .label { fill: var(--ink); font: 900 italic 12px var(--f-display); letter-spacing: 0.08em; text-anchor: middle; paint-order: stroke; stroke: var(--black); stroke-width: 4px; }
+.pc-chart .burst { fill: none; stroke: var(--lime); stroke-width: 4; }
+.pc-chip { position: absolute; z-index: 46; padding: 3px 10px; border-radius: 999px; background: var(--lime); color: var(--black); font-size: 16px; box-shadow: 3px 3px 0 var(--black); translate: -50% -50%; pointer-events: none; white-space: nowrap; }
+
 /* Mockup-only controls */
 .mock { position: absolute; right: 12px; bottom: 12px; z-index: 60; display: grid; justify-items: end; gap: 8px; }
 .mock > button { padding: 6px 12px; border-radius: 999px; background: var(--ink); color: var(--black); font: 800 11px var(--f-display); letter-spacing: 0.12em; box-shadow: 3px 3px 0 var(--g); }
@@ -332,6 +356,16 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
     <div class="ru-tap seq" id="ruTap"><span>TAP TO CONTINUE</span></div>
   </div>
 
+  <!-- Points chart -->
+  <div class="pc" id="pc" hidden>
+    <div class="pc-dim" id="pcDim"></div>
+    <div class="pc-stage">
+      <div class="pc-plate" id="pcPlate"><i></i></div>
+      <svg class="pc-chart" id="pcChart" viewBox="0 0 300 300" aria-hidden="true"></svg>
+      <span class="pc-tag d" id="pcTag">BOXING · 25 MIN</span>
+    </div>
+  </div>
+
   <!-- Graduation moment -->
   <div class="ru" id="gr" hidden aria-live="assertive">
     <div class="ru-bg"></div>
@@ -356,6 +390,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outl
       <button id="mRM" aria-pressed="false">Reduce Motion: off</button>
       <button id="mRank">Play a rank-up</button>
       <button id="mMax">Play a max rank-up</button>
+      <button id="mChart">Play points chart</button>
+      <button id="mChartUp">Play points chart with a rank-up</button>
       <button id="mGrad">Play graduation</button>
       <button id="mBoth">Play two rank-ups, then graduation</button>
       <button id="mReset">Reset the demo</button>
@@ -738,12 +774,118 @@ async function celebrateLog(id, prevMin, before, after) {
   if (pill) {
     fx(pill, { scale: [1, 1.07, 1] }, { duration: 0.35 })
     const [x, y] = center(pill); burst(x, y, 16, 110)
-    STATS.filter((s) => after[s] > before[s]).forEach((s, k) => floatText(`+${after[s] - before[s]} ${s.toUpperCase()}`, 40 + k * 18, y - 40 - k * 28, k * 0.15))
   }
+  // The points fly into the chart first; any rank-up screen follows it.
+  if (STATS.some((s) => after[s] > before[s])) await pointsChart(`${byId[id].name} · ${minutesOf(id) - prevMin} min`, before, after)
   const events = STATS.filter((s) => rankOf(after[s]) > rankOf(before[s])).map((s) => ({ type: 'rankUp', stat: s, from: rankOf(before[s]), to: rankOf(after[s]) }))
   const maxed = (t) => STATS.every((s) => t[s] >= 1000)
   if (maxed(after) && !maxed(before)) events.push({ type: 'graduated' })
-  if (events.length) { await wait(RM ? 400 : 950); playEvents(events) }
+  if (events.length) playEvents(events)
+}
+
+// ---------- Points chart ----------
+// Each stat's spot on its axis: its rank plus progress through that rank (1 to 5). No point
+// thresholds are shown, only the shape.
+const CX = 150, R = 104
+const AXES = { charm: [0, -1], courage: [1, 0], intelligence: [0, 1], proficiency: [-1, 0] }
+function level(p) {
+  const r = rankOf(p)
+  return r === 5 ? 5 : r + (p - RANKS[r - 1]) / (RANKS[r] - RANKS[r - 1])
+}
+const at = (stat, v) => { const [dx, dy] = AXES[stat]; return [CX + dx * R * (v / 5), CX + dy * R * (v / 5)] }
+const shapePoints = (levels) => STATS.map((s) => at(s, levels[s]).join(',')).join(' ')
+const nodeRadius = (rank) => 9 + rank * 2.6
+
+let pcDone = null
+async function pointsChart(tag, before, after) {
+  const svg = $('pcChart'), pc = $('pc'), NS = 'http://www.w3.org/2000/svg'
+  const el = (name, attrs, parent = svg) => { const e = document.createElementNS(NS, name); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); parent.appendChild(e); return e }
+  svg.innerHTML = ''
+  $('pcTag').textContent = tag.toUpperCase()
+  for (let k = 1; k <= 5; k++) el('polygon', { class: k === 5 ? 'ring top' : 'ring', points: STATS.map((s) => at(s, k).join(',')).join(' ') })
+  for (const s of STATS) { const [x, y] = at(s, 5); el('line', { class: 'axis', x1: CX, y1: CX, x2: x, y2: y }) }
+  const from = Object.fromEntries(STATS.map((s) => [s, level(before[s])]))
+  const to = Object.fromEntries(STATS.map((s) => [s, level(after[s])]))
+  const shape = el('polygon', { class: 'shape', points: shapePoints(from) })
+  const nodes = {}
+  for (const s of STATS) {
+    const [x, y] = at(s, 5), rank = rankOf(before[s])
+    const g = el('g', { class: rank === 5 ? 'node max' : 'node' })
+    const c = el('circle', { cx: x, cy: y, r: nodeRadius(rank) }, g)
+    const t = el('text', { x, y }, g); t.textContent = rank === 5 ? 'MAX' : rank
+    // Labels sit outside the diamond: above Charm and the side nodes, below Intelligence.
+    const ly = s === 'intelligence' ? y + nodeRadius(5) + 14 : y - nodeRadius(5) - 8
+    const l = el('text', { class: 'label', x, y: ly }); l.textContent = s.toUpperCase()
+    nodes[s] = { g, c, t }
+  }
+
+  pc.hidden = false
+  const done = new Promise((resolve) => (pcDone = resolve))
+  let skippable = false
+  setTimeout(() => (skippable = true), 400)
+  const close = async () => {
+    if (!pcDone) return
+    const finish = pcDone; pcDone = null
+    await animate(pc, { opacity: 0 }, { duration: 0.22 })
+    pc.hidden = true; animate(pc, { opacity: 1 }, { duration: 0 }); pc.querySelectorAll('.pc-chip').forEach((c) => c.remove())
+    finish()
+  }
+  pc.onclick = () => skippable && close()
+
+  const gained = STATS.filter((s) => after[s] > before[s])
+  const settle = (s) => {
+    const rank = rankOf(after[s]), up = rank > rankOf(before[s])
+    nodes[s].t.textContent = rank === 5 ? 'MAX' : rank
+    nodes[s].g.setAttribute('class', rank === 5 ? 'node max' : 'node')
+    nodes[s].c.setAttribute('r', nodeRadius(rank))
+    return up
+  }
+
+  if (RM) {
+    shape.setAttribute('points', shapePoints(to)); gained.forEach(settle)
+    await animate(pc, { opacity: [0, 1] }, { duration: 0.2 })
+    setTimeout(close, 1400)
+    return done
+  }
+
+  // 1. In: the dim, the plate slides in, the diamond spins up over it.
+  animate($('pcDim'), { opacity: [0, 1] }, { duration: 0.2 })
+  animate($('pcPlate'), { x: [-260, 0], opacity: [0, 1] }, { ...SNAP, delay: 0.04 })
+  animate(svg, { scale: [0.3, 1], rotate: [-90, 0], opacity: [0, 1] }, { type: 'spring', stiffness: 300, damping: 22, delay: 0.1 })
+  animate($('pcTag'), { y: [30, 0], opacity: [0, 1] }, { ...SNAP, delay: 0.2 })
+  await wait(480)
+
+  // 2. "+N" chips fly from the plate's tag into each stat that gained points.
+  const [sx, sy] = center($('pcTag'))
+  const grow = { ...from }
+  await Promise.all(gained.map(async (s, k) => {
+    await wait(k * 140)
+    const chip = document.createElement('div'); chip.className = 'pc-chip d'
+    chip.textContent = `+${after[s] - before[s]}`; chip.style.left = sx + 'px'; chip.style.top = sy + 'px'
+    stage.appendChild(chip)
+    const [tx, ty] = center(nodes[s].c), dx = tx - sx, dy = ty - sy
+    await animate(chip, { x: [0, dx * 0.45, dx], y: [0, dy * 0.45 - 60, dy], scale: [0.6, 1.25, 0.5] }, { duration: 0.5, ease: [0.3, 0, 0.4, 1] })
+    chip.remove()
+    // 3. It lands: the node pulses, the shape grows to the new level.
+    burst(tx, ty, 10, 46)
+    animate(0, 1, { duration: 0.45, ease: [0.2, 0.8, 0.2, 1], onUpdate: (p) => { grow[s] = from[s] + (to[s] - from[s]) * p; shape.setAttribute('points', shapePoints(grow)) } })
+    const startR = nodeRadius(rankOf(before[s]))
+    if (settle(s)) {
+      // 4. A rank-up: the node swells to its new size with a ring burst.
+      nodes[s].c.setAttribute('r', startR)
+      animate(startR, nodeRadius(rankOf(after[s])), { type: 'spring', stiffness: 320, damping: 12, onUpdate: (r) => nodes[s].c.setAttribute('r', r) })
+      const [nx, ny] = at(s, 5)
+      const ring = el('circle', { class: 'burst', cx: nx, cy: ny, r: startR })
+      animate(0, 1, { duration: 0.6, ease: 'easeOut', onUpdate: (p) => { ring.setAttribute('r', startR + p * 40); ring.style.opacity = 1 - p } }).then(() => ring.remove())
+      burst(tx, ty, 22, 110)
+    }
+    animate(nodes[s].g, { scale: [1, 1.35, 1] }, { duration: 0.4 })
+  }))
+
+  // 5. Hold a beat, then close on its own (or tap to skip).
+  await wait(900)
+  close()
+  return done
 }
 
 // ---------- Rank-up and graduation ----------
@@ -977,6 +1119,15 @@ $('mockBtn').addEventListener('click', () => {
 $('mRM').addEventListener('click', () => setRM(!RM))
 $('mRank').addEventListener('click', () => { $('mockPanel').hidden = true; rankUp('charm', 2, 3) })
 $('mMax').addEventListener('click', () => { $('mockPanel').hidden = true; rankUp('intelligence', 4, 5) })
+$('mChart').addEventListener('click', () => {
+  $('mockPanel').hidden = true
+  pointsChart('Boxing · 25 min', { charm: 131, courage: 120, intelligence: 241, proficiency: 85 }, { charm: 133, courage: 123, intelligence: 241, proficiency: 85 })
+})
+$('mChartUp').addEventListener('click', async () => {
+  $('mockPanel').hidden = true
+  await pointsChart('Running · 60 min', { charm: 131, courage: 57, intelligence: 241, proficiency: 85 }, { charm: 131, courage: 63, intelligence: 241, proficiency: 89 })
+  playEvents([{ type: 'rankUp', stat: 'courage', from: 1, to: 2 }])
+})
 $('mGrad').addEventListener('click', () => { $('mockPanel').hidden = true; graduate() })
 $('mBoth').addEventListener('click', () => {
   $('mockPanel').hidden = true
