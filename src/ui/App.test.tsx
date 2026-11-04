@@ -593,6 +593,238 @@ describe('Stats', () => {
   })
 })
 
+describe('My habits', () => {
+  const renderMine = async () => {
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'My habits' }))
+    await screen.findByRole('button', { name: /add custom habit/i })
+    return user
+  }
+  const listRows = (name: string) => {
+    const list = screen.queryByRole('list', { name })
+    return list ? within(list).getAllByRole('listitem') : []
+  }
+  const namesIn = (name: string) => listRows(name).map((li) => li.querySelector('.name')!.textContent)
+  const rowIn = (list: string, name: string) => listRows(list).find((li) => li.querySelector('.name')!.textContent === name)!
+  const meditation = { name: 'Meditation', category: 'study' as const, weights: { intelligence: 100 } }
+
+  it('lists your habits in Today order, with their kind and a Custom tag on custom habits', async () => {
+    await store.addToList('running', 'daily')
+    await store.addToList('chess', 'anytime')
+    await store.addToList('boxing', 'daily')
+    await store.addToList(await store.saveCustomHabit(meditation), 'anytime')
+    await renderMine()
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Boxing', 'Running', 'Chess', 'Meditation']))
+    expect(rowIn('Your list', 'Boxing').textContent).toMatch(/Daily/)
+    expect(rowIn('Your list', 'Boxing').textContent).not.toMatch(/Custom/)
+    expect(rowIn('Your list', 'Meditation').textContent).toMatch(/Anytime/)
+    expect(rowIn('Your list', 'Meditation').textContent).toMatch(/Custom/)
+    expect(namesIn('Your custom habits')).toEqual([])
+  })
+
+  it('tapping the kind tag switches daily/anytime, and Today follows', async () => {
+    await db.activeHabits.put({ habitId: 'boxing', addedOn: '2026-10-20', kind: 'daily' })
+    const user = await renderMine()
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Boxing']))
+    await user.click(within(rowIn('Your list', 'Boxing')).getByRole('button', { name: /^Daily/ }))
+    await waitFor(() => expect(within(rowIn('Your list', 'Boxing')).getByRole('button', { name: /^Anytime/ })).toBeTruthy())
+    expect(await store.activeHabits()).toEqual([{ habitId: 'boxing', addedOn: '2026-10-20', kind: 'anytime' }])
+    await user.click(within(strip()).getByRole('button', { name: 'Today' }))
+    const anytime = await screen.findByRole('region', { name: 'Anytime' })
+    expect(within(anytime).getByRole('button', { name: /^Boxing/ })).toBeTruthy()
+  })
+
+  it('removes a habit with a toast, keeping its history; Undo puts it back exactly', async () => {
+    await db.activeHabits.put({ habitId: 'boxing', addedOn: '2026-10-20', kind: 'daily' })
+    await store.logSession('boxing', 25)
+    const user = await renderMine()
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Boxing']))
+    await user.click(within(rowIn('Your list', 'Boxing')).getByRole('button', { name: 'Remove' }))
+    const toast = await screen.findByRole('status')
+    expect(toast.textContent).toMatch(/Removed\. Its history stays\./)
+    await waitFor(() => expect(namesIn('Your list')).toEqual([]))
+    expect(await store.activeHabits()).toEqual([])
+    expect(await store.totals()).toMatchObject({ courage: 3, charm: 2 })
+
+    await user.click(within(toast).getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Boxing']))
+    expect(await store.activeHabits()).toEqual([{ habitId: 'boxing', addedOn: '2026-10-20', kind: 'daily' }])
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('the toast goes after 5 seconds', { timeout: 10_000 }, async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderMine()
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Boxing']))
+    await user.click(within(rowIn('Your list', 'Boxing')).getByRole('button', { name: 'Remove' }))
+    expect(await screen.findByRole('status')).toBeTruthy()
+    await new Promise((done) => setTimeout(done, 4500))
+    expect(screen.queryByRole('status')).toBeTruthy()
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull(), { timeout: 2000 })
+  })
+
+  it('a second remove replaces the toast; Undo brings back only the latest', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.addToList('running', 'daily')
+    const user = await renderMine()
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Boxing', 'Running']))
+    await user.click(within(rowIn('Your list', 'Boxing')).getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Running']))
+    await user.click(within(rowIn('Your list', 'Running')).getByRole('button', { name: 'Remove' }))
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Running']))
+  })
+
+  it('leaving My habits closes the toast', async () => {
+    await store.addToList('boxing', 'daily')
+    const user = await renderMine()
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Boxing']))
+    await user.click(within(rowIn('Your list', 'Boxing')).getByRole('button', { name: 'Remove' }))
+    expect(await screen.findByRole('status')).toBeTruthy()
+    await user.click(within(strip()).getByRole('button', { name: 'Stats' }))
+    // hidden: true also looks in the panes swiped away from (they're aria-hidden).
+    expect(screen.queryByRole('status', { hidden: true })).toBeNull()
+  })
+
+  it('lists custom habits that are not on your list, and adds one back', async () => {
+    await store.saveCustomHabit(meditation)
+    const user = await renderMine()
+    await waitFor(() => expect(namesIn('Your custom habits')).toEqual(['Meditation']))
+    await user.click(within(rowIn('Your custom habits', 'Meditation')).getByRole('button', { name: 'Add Meditation' }))
+    await user.click(within(rowIn('Your custom habits', 'Meditation')).getByRole('button', { name: 'Anytime' }))
+    await waitFor(() => expect(namesIn('Your list')).toEqual(['Meditation']))
+    expect(screen.queryByRole('list', { name: 'Your custom habits' })).toBeNull()
+  })
+
+  it('says the list is empty and links to the Library', async () => {
+    const user = await renderMine()
+    expect(await screen.findByText(/your list is empty/i)).toBeTruthy()
+    await user.click(within(screen.getByRole('region', { name: 'My habits' })).getByRole('button', { name: 'Go to Library' }))
+    expect(await screen.findByRole('list', { name: 'Habits' })).toBeTruthy()
+  })
+
+  describe('new custom habit sheet', () => {
+    const openForm = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByRole('button', { name: /add custom habit/i }))
+      return screen.findByRole('dialog', { name: 'New custom habit' })
+    }
+    const pressedIn = (sheet: HTMLElement, group: string) =>
+      within(within(sheet).getByRole('group', { name: group }))
+        .getAllByRole('button')
+        .filter((b) => b.getAttribute('aria-pressed') === 'true')
+        .map((b) => b.textContent)
+    const weight = (sheet: HTMLElement, stat: string) => within(sheet).getByLabelText(`${stat} weight`).textContent
+    const save = (sheet: HTMLElement) => within(sheet).getByRole('button', { name: 'Save' }) as HTMLButtonElement
+
+    it("a category pre-selects its default stats, split evenly", async () => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      expect(pressedIn(sheet, 'Category')).toEqual([])
+      await user.click(within(within(sheet).getByRole('group', { name: 'Category' })).getByRole('button', { name: 'Fitness' }))
+      expect(pressedIn(sheet, 'Stats')).toEqual(['Courage', 'Proficiency'])
+      expect(weight(sheet, 'Courage')).toBe('50')
+      expect(weight(sheet, 'Proficiency')).toBe('50')
+      expect(within(sheet).getByText(/Total 100 \/ 100/)).toBeTruthy()
+    })
+
+    it('turning stats on or off resets the split; the first stat gets the extra 10', async () => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      const stats = within(within(sheet).getByRole('group', { name: 'Stats' }))
+      await user.click(within(within(sheet).getByRole('group', { name: 'Category' })).getByRole('button', { name: 'Study' }))
+      expect(weight(sheet, 'Intelligence')).toBe('100')
+      await user.click(stats.getByRole('button', { name: 'Charm' }))
+      expect([weight(sheet, 'Intelligence'), weight(sheet, 'Charm')]).toEqual(['50', '50'])
+      await user.click(stats.getByRole('button', { name: 'Courage' }))
+      expect([weight(sheet, 'Intelligence'), weight(sheet, 'Charm'), weight(sheet, 'Courage')]).toEqual(['40', '30', '30'])
+      await user.click(stats.getByRole('button', { name: 'Intelligence' }))
+      expect([weight(sheet, 'Charm'), weight(sheet, 'Courage')]).toEqual(['50', '50'])
+      expect(within(sheet).queryByLabelText('Intelligence weight')).toBeNull()
+    })
+
+    it('steppers move by 10, stay between 10 and 100, and Save waits for a total of 100', async () => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      await user.type(within(sheet).getByLabelText('Name'), 'Juggling')
+      await user.click(within(within(sheet).getByRole('group', { name: 'Category' })).getByRole('button', { name: 'Art' }))
+      expect(save(sheet).disabled).toBe(false)
+      await user.click(within(sheet).getByRole('button', { name: 'More Proficiency' }))
+      expect(weight(sheet, 'Proficiency')).toBe('60')
+      expect(within(sheet).getByText(/Total 110 \/ 100/)).toBeTruthy()
+      expect(save(sheet).disabled).toBe(true)
+      await user.click(within(sheet).getByRole('button', { name: 'Less Charm' }))
+      expect(save(sheet).disabled).toBe(false)
+      for (let i = 0; i < 3; i++) await user.click(within(sheet).getByRole('button', { name: 'Less Charm' }))
+      expect(weight(sheet, 'Charm')).toBe('10')
+      expect((within(sheet).getByRole('button', { name: 'Less Charm' }) as HTMLButtonElement).disabled).toBe(true)
+      await user.click(within(within(sheet).getByRole('group', { name: 'Category' })).getByRole('button', { name: 'Reading' }))
+      expect(weight(sheet, 'Intelligence')).toBe('100')
+      expect((within(sheet).getByRole('button', { name: 'More Intelligence' }) as HTMLButtonElement).disabled).toBe(true)
+    })
+
+    it.each([
+      ['boxing', /already exists/],
+      ['!!!', /letter A–Z or a digit/],
+      ['x'.repeat(41), /40/],
+    ])('shows why the name "%s" is not allowed, and keeps Save off', async (name, reason) => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      await user.click(within(within(sheet).getByRole('group', { name: 'Category' })).getByRole('button', { name: 'Art' }))
+      await user.type(within(sheet).getByLabelText('Name'), name)
+      expect(within(sheet).getByText(reason)).toBeTruthy()
+      expect(save(sheet).disabled).toBe(true)
+    })
+
+    it('Save needs a name and a category', async () => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      expect(save(sheet).disabled).toBe(true)
+      await user.type(within(sheet).getByLabelText('Name'), 'Juggling')
+      expect(save(sheet).disabled).toBe(true)
+    })
+
+    it('Save creates the habit and puts it on your list with the chosen kind (Daily by default)', async () => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      expect(pressedIn(sheet, 'Show as')).toEqual(['Daily'])
+      await user.type(within(sheet).getByLabelText('Name'), 'Juggling')
+      await user.click(within(within(sheet).getByRole('group', { name: 'Category' })).getByRole('button', { name: 'Art' }))
+      await user.click(within(within(sheet).getByRole('group', { name: 'Show as' })).getByRole('button', { name: 'Anytime' }))
+      await user.click(save(sheet))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await waitFor(() => expect(namesIn('Your list')).toEqual(['Juggling']))
+      expect(rowIn('Your list', 'Juggling').textContent).toMatch(/Anytime.*Custom|Custom.*Anytime/)
+      expect((await store.habits()).find((h) => h.id === 'custom-juggling')).toMatchObject({
+        name: 'Juggling',
+        category: 'art',
+        weights: { proficiency: 50, charm: 50 },
+      })
+      await user.click(within(strip()).getByRole('button', { name: 'Today' }))
+      const anytime = await screen.findByRole('region', { name: 'Anytime' })
+      expect(within(anytime).getByRole('button', { name: /^Juggling/ })).toBeTruthy()
+    })
+
+    it('closes with ✕ without saving', async () => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      await user.type(within(sheet).getByLabelText('Name'), 'Juggling')
+      await user.click(within(sheet).getByRole('button', { name: 'Close' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(await db.customHabits.count()).toBe(0)
+    })
+
+    it('closes when tapping outside the sheet, without saving', async () => {
+      const user = await renderMine()
+      const sheet = await openForm(user)
+      await user.type(within(sheet).getByLabelText('Name'), 'Juggling')
+      await user.click(document.querySelector('.sheet-backdrop')!)
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(await db.customHabits.count()).toBe(0)
+    })
+  })
+})
+
 describe('rank banner (placeholder until step 5)', () => {
   it('shows a rank-up, and dismisses on tap', async () => {
     await seed('courage', 58)

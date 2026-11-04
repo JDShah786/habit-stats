@@ -243,3 +243,56 @@ describe('custom habits', () => {
     expect(await store.totals()).toEqual(totals({ courage: 2, intelligence: 6 }))
   })
 })
+
+describe('switching kind and undoing a remove (step 4d)', () => {
+  it('setKind switches daily/anytime and keeps addedOn', async () => {
+    day = YESTERDAY
+    await store.addToList('boxing', 'daily')
+    day = TODAY
+    await store.setKind('boxing', 'anytime')
+    expect(await store.activeHabits()).toEqual([{ habitId: 'boxing', addedOn: YESTERDAY, kind: 'anytime' }])
+  })
+
+  it('setKind rejects a habit that is not on the list', async () => {
+    await expect(store.setKind('boxing', 'daily')).rejects.toThrow(/not on your list/)
+    expect(await store.activeHabits()).toEqual([])
+  })
+
+  it('removeFromList returns the removed row, and restoreToList puts it back exactly', async () => {
+    day = YESTERDAY
+    await store.addToList('boxing', 'anytime')
+    day = TODAY
+    const removed = await store.removeFromList('boxing')
+    expect(removed).toEqual({ habitId: 'boxing', addedOn: YESTERDAY, kind: 'anytime' })
+    await store.restoreToList(removed!)
+    expect(await store.activeHabits()).toEqual([{ habitId: 'boxing', addedOn: YESTERDAY, kind: 'anytime' }])
+  })
+
+  it('removing a habit that is not on the list returns nothing', async () => {
+    expect(await store.removeFromList('boxing')).toBeUndefined()
+  })
+})
+
+describe('custom habit checks (step 4d)', () => {
+  const juggling = { name: 'Juggling', category: 'art' as const, weights: { proficiency: 50, charm: 50 } }
+
+  it('accepts a name of exactly 40 characters and rejects 41', async () => {
+    await expect(store.saveCustomHabit({ ...juggling, name: 'a'.repeat(40) })).resolves.toBe(`custom-${'a'.repeat(40)}`)
+    await expect(store.saveCustomHabit({ ...juggling, name: 'b'.repeat(41) })).rejects.toThrow(/40/)
+  })
+
+  it('rejects a name that matches a preset, ignoring case', async () => {
+    await expect(store.saveCustomHabit({ ...juggling, name: '  BOXING ' })).rejects.toThrow(/already exists/)
+    expect(await db.customHabits.count()).toBe(0)
+  })
+
+  it.each([
+    ['not multiples of 10', { proficiency: 55, charm: 45 }],
+    ['not summing to 100', { proficiency: 50, charm: 40 }],
+    ['a zero weight', { proficiency: 100, charm: 0 }],
+    ['no stats', {}],
+  ])('rejects weights with %s and saves nothing', async (_, weights) => {
+    await expect(store.saveCustomHabit({ ...juggling, weights })).rejects.toThrow(/weights/)
+    expect(await db.customHabits.count()).toBe(0)
+  })
+})
