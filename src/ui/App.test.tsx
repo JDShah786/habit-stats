@@ -135,6 +135,27 @@ describe('app shell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Stats' }, { timeout: 2000 })).toBeTruthy()
     expect(screen.queryByRole('heading', { level: 1, name: 'Library' })).toBeNull()
   })
+
+  // Bubbles are decorative <i class="pop"> elements added to <body>. Clear any left from
+  // the menu-word tap first, so only MENU's own bubbles count.
+  const clearBubbles = () => document.querySelectorAll('.pop').forEach((b) => b.remove())
+
+  it('MENU pops bubbles when tapped', async () => {
+    reduceMotion = false
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'Stats' }))
+    await screen.findByRole('heading', { level: 1, name: 'Stats' }, { timeout: 2000 })
+    clearBubbles()
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    expect(document.querySelectorAll('.pop').length).toBeGreaterThan(0)
+  })
+
+  it('MENU pops no bubbles with Reduce Motion on', async () => {
+    const user = await renderApp()
+    clearBubbles()
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    expect(document.querySelectorAll('.pop')).toHaveLength(0)
+  })
 })
 
 describe('Today', () => {
