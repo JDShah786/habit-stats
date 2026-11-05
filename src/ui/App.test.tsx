@@ -746,6 +746,8 @@ describe('My habits', () => {
     await user.click(within(rowIn('Your list', 'Boxing')).getByRole('button', { name: 'Remove' }))
     await waitFor(() => expect(namesIn('Your list')).toEqual(['Running']))
     await user.click(within(rowIn('Your list', 'Running')).getByRole('button', { name: 'Remove' }))
+    // Let the second remove finish before tapping Undo.
+    await waitFor(() => expect(namesIn('Your list')).toEqual([]))
     expect(screen.getAllByRole('status')).toHaveLength(1)
     await user.click(within(screen.getByRole('status')).getByRole('button', { name: 'Undo' }))
     await waitFor(() => expect(namesIn('Your list')).toEqual(['Running']))
