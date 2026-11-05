@@ -1900,3 +1900,88 @@ input:focus {
   background: radial-gradient(circle at 32% 30%, var(--ink) 0 18%, var(--lime) 34%, var(--g) 75%);
   box-shadow: 0 0 8px var(--g);
 }
+
+/* Settings (backup) */
+
+.mine-top {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 12px 10px 0;
+}
+
+.settings-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--g);
+  color: var(--g);
+  font: 900 italic 12px var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--g) 40%, transparent);
+  rotate: -4deg;
+}
+
+.backup-last {
+  margin: 0;
+  font: 800 12px var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.backup-action {
+  display: grid;
+  gap: 6px;
+}
+
+.backup-action .primary,
+.backup-buttons .primary {
+  display: block;
+  width: calc(100% - 8px);
+  text-align: center;
+  cursor: pointer;
+}
+
+.backup-action .muted {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* The file picker is a label styled as a button; its input is visually hidden. */
+.file-pick:focus-within {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+}
+
+.backup-confirm {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 22px;
+  border: 2px solid var(--g);
+  background: var(--black);
+}
+
+.backup-what {
+  font: 800 14px var(--display);
+  letter-spacing: 0.04em;
+}
+
+.backup-buttons {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-quiet {
+  padding: 10px;
+  border-radius: 999px;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  font: 900 italic 15px var(--display);
+  text-transform: uppercase;
+}
+
+.backup-done {
+  color: var(--lime);
+  font: 900 italic 18px var(--display);
+  text-transform: uppercase;
+}

@@ -4,6 +4,7 @@
 import { scoreDay, type Weights } from '../engine/scoring'
 import { rankEvents, STATS, type RankEvent, type Stat, type StatPoints } from '../engine/stats'
 import { HABITS, slugOf, type Habit } from '../library/library'
+import type { BackupData } from './backup'
 import type { ActiveHabitRow, AwardRow, HabitDB, HabitKind, SessionRow } from './db'
 
 export interface Store {
@@ -24,12 +25,19 @@ export interface Store {
   habits(): Promise<Habit[]>
   // Returns the new id: 'custom-' + a slug of the name.
   saveCustomHabit(habit: Omit<Habit, 'id'>): Promise<string>
+  // Backup (step 6): every row of every table.
+  allData(): Promise<BackupData>
+  // Swaps every table for `data` in one transaction: all of it, or (on any failure) none.
+  replaceAll(data: BackupData): Promise<void>
+  // ISO time of the last completed backup, or null.
+  lastBackup(): Promise<string | null>
+  setLastBackup(at: string): Promise<void>
 }
 
 export const MAX_NAME = 40
 
 // Same rule as the presets: each weight a multiple of 10 from 10 to 100, known stats, sum 100.
-const validWeights = (weights: Weights) => {
+export const validWeights = (weights: Weights) => {
   const entries = Object.entries(weights)
   return (
     entries.every(([stat, w]) => STATS.includes(stat as Stat) && Number.isInteger(w / 10) && w >= 10 && w <= 100) &&
@@ -143,6 +151,29 @@ export function createStore(db: HabitDB, today: () => string): Store {
       if (await db.customHabits.get(id)) throw new Error(`a custom habit named "${trimmed}" already exists`)
       await db.customHabits.add({ id, name: trimmed, category, weights, custom: true })
       return id
+    },
+
+    allData: async () => ({
+      customHabits: await db.customHabits.toArray(),
+      activeHabits: await db.activeHabits.toArray(),
+      sessions: await db.sessions.toArray(),
+      awards: await db.awards.toArray(),
+    }),
+
+    // Clear and refill in one transaction: anything thrown rolls all of it back.
+    replaceAll: (data) =>
+      db.transaction('rw', [db.customHabits, db.activeHabits, db.sessions, db.awards], async () => {
+        await Promise.all([db.customHabits.clear(), db.activeHabits.clear(), db.sessions.clear(), db.awards.clear()])
+        await db.customHabits.bulkAdd(data.customHabits)
+        await db.activeHabits.bulkAdd(data.activeHabits)
+        await db.sessions.bulkAdd(data.sessions)
+        await db.awards.bulkAdd(data.awards)
+      }),
+
+    lastBackup: async () => (await db.settings.get('lastBackup'))?.value ?? null,
+
+    setLastBackup: async (at) => {
+      await db.settings.put({ key: 'lastBackup', value: at })
     },
   }
 }

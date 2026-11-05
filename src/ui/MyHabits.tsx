@@ -13,6 +13,7 @@ import { categoryStats, defaultWeights, nameError, weightsTotal } from './custom
 import { CATEGORY_LABELS, KIND_LABELS, statsByWeight } from './libraryView'
 import { BOUNCY, burst, SNAP, tapPoint } from './motionKit'
 import { usePrefersReducedMotion } from './reducedMotion'
+import { SettingsSheet } from './Settings'
 import { Sheet } from './Sheet'
 import { listOrder, statName } from './todayView'
 
@@ -24,6 +25,8 @@ interface Props {
   dataVersion: number
   onDataChange: () => void
   onGoToLibrary: () => void
+  // The clock, for Settings' backup file name and time.
+  now: () => Date
 }
 
 interface Loaded {
@@ -42,13 +45,14 @@ const other = (kind: HabitKind): HabitKind => (kind === 'daily' ? 'anytime' : 'd
 // 'custom-' is reserved for custom habit ids (SPEC "Habit library").
 const isCustom = (habitId: string) => habitId.startsWith('custom-')
 
-export function MyHabits({ store, active, dataVersion, onDataChange, onGoToLibrary }: Props) {
+export function MyHabits({ store, active, dataVersion, onDataChange, onGoToLibrary, now }: Props) {
   const reduced = usePrefersReducedMotion()
   const [data, setData] = useState<Loaded | null>(null)
   const [removed, setRemoved] = useState<Removed | null>(null)
   // The custom habit row showing the DAILY / ANYTIME choice. One at a time.
   const [choosing, setChoosing] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [settings, setSettings] = useState(false)
 
   // Leaving My habits closes the toast and the choice (adjusting state during render).
   const [wasActive, setWasActive] = useState(active)
@@ -116,6 +120,12 @@ export function MyHabits({ store, active, dataVersion, onDataChange, onGoToLibra
   return (
     <>
       <h1>My habits</h1>
+
+      <div className="mine-top">
+        <motion.button className="settings-btn" whileTap={{ scale: 0.92 }} onClick={() => setSettings(true)}>
+          Settings
+        </motion.button>
+      </div>
 
       <motion.button className="new-habit" whileTap={{ scale: 0.95 }} onClick={() => setCreating(true)}>
         <span aria-hidden="true">+ </span>Add custom habit
@@ -242,6 +252,10 @@ export function MyHabits({ store, active, dataVersion, onDataChange, onGoToLibra
           onSaved={onDataChange}
           onClose={() => setCreating(false)}
         />
+      )}
+
+      {settings && (
+        <SettingsSheet store={store} now={now} reduced={reduced} onRestored={onDataChange} onClose={() => setSettings(false)} />
       )}
     </>
   )

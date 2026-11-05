@@ -113,6 +113,7 @@ export function App({ store, now = () => new Date() }: Props) {
                   dataVersion={dataVersion}
                   onDataChange={dataChanged}
                   onGoToLibrary={() => setIndex(1)}
+                  now={now}
                 />
               )
             }}

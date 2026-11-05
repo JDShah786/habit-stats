@@ -30,11 +30,18 @@ export interface CustomHabitRow extends Habit {
   custom: true
 }
 
+// Small app settings, e.g. { key: 'lastBackup', value: '2026-11-04T18:30:00.000Z' }.
+export interface SettingRow {
+  key: string
+  value: string
+}
+
 export type HabitDB = Dexie & {
   sessions: EntityTable<SessionRow, 'id'>
   awards: Table<AwardRow, [string, string, Stat]>
   activeHabits: EntityTable<ActiveHabitRow, 'habitId'>
   customHabits: EntityTable<CustomHabitRow, 'id'>
+  settings: EntityTable<SettingRow, 'key'>
 }
 
 export function openDb(name = 'habit-stats'): HabitDB {
@@ -45,5 +52,7 @@ export function openDb(name = 'habit-stats'): HabitDB {
     activeHabits: 'habitId',
     customHabits: 'id',
   })
+  // Version 2 (step 6) adds the settings table; every existing table and row is kept.
+  db.version(2).stores({ settings: 'key' })
   return db
 }
