@@ -906,7 +906,7 @@ describe('Settings: backup', () => {
     await user.click(within(sheet).getByRole('button', { name: 'Export backup' }))
     await waitFor(() => expect(within(sheet).getByText(/last backup: 27 oct 2026/i)).toBeTruthy())
     expect(shared).toHaveLength(1)
-    expect(shared[0].name).toBe('habit-stats-backup-2026-10-27.json')
+    expect(shared[0].name).toBe('meta-log-backup-2026-10-27.json')
     const saved = JSON.parse(await shared[0].text())
     expect(saved).toMatchObject({ app: 'habit-stats', version: 1, exportedAt: NOW.toISOString() })
     expect(saved.data.sessions).toEqual([expect.objectContaining({ habitId: 'boxing', minutes: 25 })])
@@ -935,7 +935,7 @@ describe('Settings: backup', () => {
       const { user, sheet } = await openSettings()
       await user.click(within(sheet).getByRole('button', { name: 'Export backup' }))
       await waitFor(() => expect(within(sheet).getByText(/last backup: 27 oct 2026/i)).toBeTruthy())
-      expect(downloads).toEqual(['habit-stats-backup-2026-10-27.json'])
+      expect(downloads).toEqual(['meta-log-backup-2026-10-27.json'])
     } finally {
       HTMLAnchorElement.prototype.click = click
     }
@@ -984,7 +984,7 @@ describe('Settings: backup', () => {
   })
 
   it.each([
-    ['a file that is not a backup', 'hello', /not a Habit Stats backup/],
+    ['a file that is not a backup', 'hello', /not a Meta Log backup/],
     ['a backup from a newer app', backup({ version: 2 }), /newer version/],
     ['a backup with a bad session', backup({ data: { ...backup().data, sessions: [{ id: 1, habitId: 'chess', date: '2026-10-20', minutes: 0 }] } }), /minutes/],
   ])('rejects %s: says why, offers no Replace, and changes nothing', async (_, contents, why) => {

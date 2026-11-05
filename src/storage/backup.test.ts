@@ -41,7 +41,7 @@ describe('making a backup', () => {
   })
 
   it("names the file after the phone's day", () => {
-    expect(backupFileName('2026-11-04')).toBe('habit-stats-backup-2026-11-04.json')
+    expect(backupFileName('2026-11-04')).toBe('meta-log-backup-2026-11-04.json')
   })
 
   it('summarises a backup for the confirm step', () => {
@@ -69,8 +69,8 @@ describe('checking a backup file: all or nothing', () => {
     ['a bad export time', JSON.stringify({ ...valid(), exportedAt: 'yesterday' })],
     ['a missing table', JSON.stringify({ ...valid(), data: { ...valid().data, sessions: undefined } })],
     ['a table that is not a list', JSON.stringify({ ...valid(), data: { ...valid().data, awards: {} } })],
-  ])('rejects %s as not a Habit Stats backup', (_, text) => {
-    expect(reason(checkBackup(text))).toMatch(/not a Habit Stats backup/)
+  ])('rejects %s as not a Meta Log backup', (_, text) => {
+    expect(reason(checkBackup(text))).toMatch(/not a Meta Log backup/)
   })
 
   it('rejects a backup from a newer version of the app', () => {
