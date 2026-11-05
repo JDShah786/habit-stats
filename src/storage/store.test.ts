@@ -361,3 +361,13 @@ describe('backup: all data in, all data out (step 6)', () => {
     await upgraded.delete()
   })
 })
+
+describe('install hint dismissal (step 7)', () => {
+  it('starts not dismissed, and stays dismissed once dismissed', async () => {
+    expect(await store.installHintDismissed()).toBe(false)
+    await store.dismissInstallHint()
+    expect(await store.installHintDismissed()).toBe(true)
+    // A fresh store on the same database still remembers it.
+    expect(await createStore(db, () => TODAY).installHintDismissed()).toBe(true)
+  })
+})

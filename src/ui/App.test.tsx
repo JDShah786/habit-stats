@@ -158,6 +158,60 @@ describe('app shell', () => {
   })
 })
 
+describe('install hint (step 7)', () => {
+  const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1'
+  const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+  const hint = () => screen.queryByRole('complementary', { name: 'Install Meta Log' })
+  // jsdom says it's a desktop browser; these tests pretend to be an iPhone where needed.
+  const beIPhone = () => Object.defineProperty(navigator, 'userAgent', { configurable: true, value: IPHONE })
+  afterEach(() => {
+    delete (navigator as { userAgent?: string }).userAgent // back to jsdom's own
+  })
+  // The installed app reports display-mode: standalone.
+  const beInstalled = () => {
+    const ordinary = window.matchMedia
+    window.matchMedia = (query: string) => ({ ...ordinary(query), matches: query === '(display-mode: standalone)' || ordinary(query).matches })
+  }
+
+  it("on an iPhone in Safari, the menu shows how to add Meta Log to the Home Screen, and the backup tip", async () => {
+    beIPhone()
+    renderOnMenu()
+    const card = await screen.findByRole('complementary', { name: 'Install Meta Log' })
+    expect(card.textContent).toMatch(/tap Share, then Add to Home Screen/i)
+    expect(card.textContent).toMatch(/export a backup here first/i)
+  })
+
+  it('does not show once installed', async () => {
+    beIPhone()
+    beInstalled()
+    renderOnMenu()
+    await menu()
+    await sleep(300)
+    expect(hint()).toBeNull()
+  })
+
+  it('does not show on the laptop', async () => {
+    renderOnMenu()
+    await menu()
+    await sleep(300)
+    expect(hint()).toBeNull()
+  })
+
+  it('✕ hides it for good, even after the app reopens', async () => {
+    beIPhone()
+    const user = renderOnMenu()
+    const card = await screen.findByRole('complementary', { name: 'Install Meta Log' })
+    await user.click(within(card).getByRole('button', { name: 'Dismiss install hint' }))
+    expect(hint()).toBeNull()
+    expect(await store.installHintDismissed()).toBe(true)
+    cleanup()
+    renderOnMenu()
+    await menu()
+    await sleep(300)
+    expect(hint()).toBeNull()
+  })
+})
+
 describe('Today', () => {
   it('shows an empty state that links to the Library', async () => {
     const user = await renderApp()
