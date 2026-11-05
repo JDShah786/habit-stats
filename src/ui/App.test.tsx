@@ -846,6 +846,157 @@ describe('My habits', () => {
   })
 })
 
+describe('Settings: backup', () => {
+  type User = ReturnType<typeof userEvent.setup>
+  const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+  const openSettings = async () => {
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'My habits' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    return { user, sheet: await screen.findByRole('dialog', { name: 'Settings' }) }
+  }
+  // A backup made on 20 Oct: Juggling (custom) on the list, one session, its awards.
+  const backup = (changes: Record<string, unknown> = {}) => ({
+    app: 'habit-stats',
+    version: 1,
+    exportedAt: '2026-10-20T12:00:00.000Z',
+    data: {
+      customHabits: [{ id: 'custom-juggling', name: 'Juggling', category: 'art', weights: { proficiency: 50, charm: 50 }, custom: true }],
+      activeHabits: [
+        { habitId: 'custom-juggling', addedOn: '2026-10-02', kind: 'anytime' },
+        { habitId: 'chess', addedOn: '2026-10-03', kind: 'daily' },
+      ],
+      sessions: [
+        { id: 1, habitId: 'custom-juggling', date: '2026-10-19', minutes: 30 },
+        { id: 2, habitId: 'chess', date: '2026-10-20', minutes: 10 },
+      ],
+      awards: [
+        { habitId: 'custom-juggling', date: '2026-10-19', stat: 'proficiency', points: 3 },
+        { habitId: 'custom-juggling', date: '2026-10-19', stat: 'charm', points: 3 },
+        { habitId: 'chess', date: '2026-10-20', stat: 'intelligence', points: 3 },
+        { habitId: 'chess', date: '2026-10-20', stat: 'courage', points: 1 },
+      ],
+    },
+    ...changes,
+  })
+  const file = (contents: unknown, name = 'habit-stats-backup-2026-10-20.json') =>
+    new File([typeof contents === 'string' ? contents : JSON.stringify(contents)], name, { type: 'application/json' })
+  const importFile = (user: User, sheet: HTMLElement, f: File) => user.upload(within(sheet).getByLabelText('Import backup'), f)
+
+  // jsdom has no share sheet and no object URLs; each test sets up what it needs.
+  const setShare = (share?: (data: ShareData) => Promise<void>) => {
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: share ? () => true : undefined })
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share })
+  }
+  afterEach(() => setShare(undefined))
+
+  it('SETTINGS on My habits opens the sheet: no backup yet, Export and Import', async () => {
+    const { sheet } = await openSettings()
+    expect(within(sheet).getByText(/no backup yet/i)).toBeTruthy()
+    expect(within(sheet).getByRole('button', { name: 'Export backup' })).toBeTruthy()
+    expect(within(sheet).getByLabelText('Import backup')).toBeTruthy()
+  })
+
+  it("Export hands the file to the share sheet, named after today, and records today's backup", async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 25)
+    const shared: File[] = []
+    setShare(async (data) => void shared.push(...(data.files ?? [])))
+    const { user, sheet } = await openSettings()
+    await user.click(within(sheet).getByRole('button', { name: 'Export backup' }))
+    await waitFor(() => expect(within(sheet).getByText(/last backup: 27 oct 2026/i)).toBeTruthy())
+    expect(shared).toHaveLength(1)
+    expect(shared[0].name).toBe('habit-stats-backup-2026-10-27.json')
+    const saved = JSON.parse(await shared[0].text())
+    expect(saved).toMatchObject({ app: 'habit-stats', version: 1, exportedAt: NOW.toISOString() })
+    expect(saved.data.sessions).toEqual([expect.objectContaining({ habitId: 'boxing', minutes: 25 })])
+    expect(saved.data.activeHabits).toEqual([expect.objectContaining({ habitId: 'boxing', kind: 'daily' })])
+  })
+
+  it('cancelling the share sheet does not count as a backup', async () => {
+    setShare(() => Promise.reject(new DOMException('cancelled', 'AbortError')))
+    const { user, sheet } = await openSettings()
+    await user.click(within(sheet).getByRole('button', { name: 'Export backup' }))
+    await sleep(200)
+    expect(within(sheet).getByText(/no backup yet/i)).toBeTruthy()
+    expect(within(sheet).queryByRole('alert')).toBeNull()
+  })
+
+  it('without a share sheet (e.g. the laptop), Export downloads the file', async () => {
+    setShare(undefined)
+    const downloads: string[] = []
+    URL.createObjectURL = () => 'blob:backup'
+    URL.revokeObjectURL = () => {}
+    const click = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+      downloads.push(this.download)
+    }
+    try {
+      const { user, sheet } = await openSettings()
+      await user.click(within(sheet).getByRole('button', { name: 'Export backup' }))
+      await waitFor(() => expect(within(sheet).getByText(/last backup: 27 oct 2026/i)).toBeTruthy())
+      expect(downloads).toEqual(['habit-stats-backup-2026-10-27.json'])
+    } finally {
+      HTMLAnchorElement.prototype.click = click
+    }
+  })
+
+  it('Import checks the file, then asks before replacing, showing what is in it', async () => {
+    await store.addToList('boxing', 'daily')
+    const { user, sheet } = await openSettings()
+    await importFile(user, sheet, file(backup()))
+    expect(await within(sheet).findByText('Backup from 20 Oct 2026 · 2 habits on your list · 2 sessions')).toBeTruthy()
+    expect(within(sheet).getByText(/this replaces all data on this phone/i)).toBeTruthy()
+    // Nothing has changed yet.
+    expect(await store.activeHabits()).toEqual([expect.objectContaining({ habitId: 'boxing' })])
+  })
+
+  it('REPLACE swaps in the backup: every table, the sections reload, and no rank-ups play', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 25)
+    const { user, sheet } = await openSettings()
+    await importFile(user, sheet, file(backup()))
+    await user.click(await within(sheet).findByRole('button', { name: 'Replace' }))
+    expect(await within(sheet).findByText('Backup restored.')).toBeTruthy()
+    expect(within(sheet).getByText(/last backup: 20 oct 2026/i)).toBeTruthy()
+    const all = await store.allData()
+    expect(all.activeHabits.map((a) => a.habitId).sort()).toEqual(['chess', 'custom-juggling'])
+    expect(all.sessions.map((s) => s.id)).toEqual([1, 2])
+    expect(all.customHabits.map((h) => h.id)).toEqual(['custom-juggling'])
+    expect(await store.totals()).toEqual({ charm: 3, courage: 1, intelligence: 3, proficiency: 3 })
+    // My habits shows the restored list.
+    await waitFor(() => {
+      const list = within(screen.getByRole('list', { name: 'Your list' }))
+      expect(list.getAllByRole('listitem').map((li) => li.querySelector('.name')!.textContent)).toEqual(['Chess', 'Juggling'])
+    })
+    await sleep(700)
+    expect(screen.queryByRole('dialog', { name: 'Rank up' })).toBeNull()
+  })
+
+  it('Cancel at the confirm step leaves everything as it was', async () => {
+    await store.addToList('boxing', 'daily')
+    const { user, sheet } = await openSettings()
+    await importFile(user, sheet, file(backup()))
+    await user.click(await within(sheet).findByRole('button', { name: 'Cancel' }))
+    expect(within(sheet).queryByRole('button', { name: 'Replace' })).toBeNull()
+    expect(await store.activeHabits()).toEqual([expect.objectContaining({ habitId: 'boxing' })])
+    expect(within(sheet).getByText(/no backup yet/i)).toBeTruthy()
+  })
+
+  it.each([
+    ['a file that is not a backup', 'hello', /not a Habit Stats backup/],
+    ['a backup from a newer app', backup({ version: 2 }), /newer version/],
+    ['a backup with a bad session', backup({ data: { ...backup().data, sessions: [{ id: 1, habitId: 'chess', date: '2026-10-20', minutes: 0 }] } }), /minutes/],
+  ])('rejects %s: says why, offers no Replace, and changes nothing', async (_, contents, why) => {
+    await store.addToList('boxing', 'daily')
+    const { user, sheet } = await openSettings()
+    await importFile(user, sheet, file(contents))
+    expect((await within(sheet).findByRole('alert')).textContent).toMatch(why)
+    expect(within(sheet).queryByRole('button', { name: 'Replace' })).toBeNull()
+    expect(await store.activeHabits()).toEqual([expect.objectContaining({ habitId: 'boxing' })])
+  })
+})
+
 describe('points chart', () => {
   const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
   const chart = () => screen.findByRole('status', { name: 'Points earned' })

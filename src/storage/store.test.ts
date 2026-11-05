@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto'
+import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Stat, StatPoints } from '../engine/stats'
 import { openDb, type HabitDB } from './db'
@@ -294,5 +295,69 @@ describe('custom habit checks (step 4d)', () => {
   ])('rejects weights with %s and saves nothing', async (_, weights) => {
     await expect(store.saveCustomHabit({ ...juggling, weights })).rejects.toThrow(/weights/)
     expect(await db.customHabits.count()).toBe(0)
+  })
+})
+
+describe('backup: all data in, all data out (step 6)', () => {
+  const backupData = {
+    customHabits: [{ id: 'custom-juggling', name: 'Juggling', category: 'art' as const, weights: { proficiency: 50, charm: 50 }, custom: true as const }],
+    activeHabits: [{ habitId: 'custom-juggling', addedOn: '2026-10-02', kind: 'anytime' as const }],
+    sessions: [{ id: 7, habitId: 'custom-juggling', date: YESTERDAY, minutes: 30 }],
+    awards: [
+      { habitId: 'custom-juggling', date: YESTERDAY, stat: 'proficiency' as const, points: 3 },
+      { habitId: 'custom-juggling', date: YESTERDAY, stat: 'charm' as const, points: 3 },
+    ],
+  }
+
+  it('allData returns every row of every table', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 25)
+    const id = await store.saveCustomHabit({ name: 'Juggling', category: 'art', weights: { proficiency: 50, charm: 50 } })
+    const all = await store.allData()
+    expect(all.activeHabits).toEqual([{ habitId: 'boxing', addedOn: TODAY, kind: 'daily' }])
+    expect(all.sessions).toEqual([expect.objectContaining({ habitId: 'boxing', date: TODAY, minutes: 25 })])
+    expect(all.awards).toHaveLength(2)
+    expect(all.customHabits.map((h) => h.id)).toEqual([id])
+  })
+
+  it('replaceAll swaps every table for the given data, and the old rows are gone', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 25)
+    await store.replaceAll(backupData)
+    expect(await store.allData()).toEqual(backupData)
+    expect(await store.totals()).toEqual(totals({ proficiency: 3, charm: 3 }))
+  })
+
+  it('replaceAll is all or nothing: if any row fails, the old data stays exactly as it was', async () => {
+    await store.addToList('boxing', 'daily')
+    await store.logSession('boxing', 25)
+    const before = await store.allData()
+    // Two awards with the same habit, day and stat can't both be stored.
+    const clash = { ...backupData, awards: [...backupData.awards, backupData.awards[0]] }
+    await expect(store.replaceAll(clash)).rejects.toThrow()
+    expect(await store.allData()).toEqual(before)
+  })
+
+  it('remembers when the last backup was made', async () => {
+    expect(await store.lastBackup()).toBeNull()
+    await store.setLastBackup('2026-10-27T18:30:00.000Z')
+    expect(await store.lastBackup()).toBe('2026-10-27T18:30:00.000Z')
+  })
+
+  it('upgrading a phone that has the old database keeps all its data', async () => {
+    const name = `upgrade-${dbCount++}`
+    const old = new Dexie(name)
+    old.version(1).stores({ sessions: '++id, date', awards: '[habitId+date+stat], date', activeHabits: 'habitId', customHabits: 'id' })
+    await old.table('activeHabits').add({ habitId: 'boxing', addedOn: '2026-10-01', kind: 'daily' })
+    await old.table('sessions').add({ habitId: 'boxing', date: YESTERDAY, minutes: 25 })
+    old.close()
+
+    const upgraded = openDb(name)
+    const upgradedStore = createStore(upgraded, () => TODAY)
+    expect(await upgradedStore.activeHabits()).toEqual([{ habitId: 'boxing', addedOn: '2026-10-01', kind: 'daily' }])
+    expect((await upgradedStore.allData()).sessions).toHaveLength(1)
+    await upgradedStore.setLastBackup('2026-10-27T18:30:00.000Z')
+    expect(await upgradedStore.lastBackup()).toBe('2026-10-27T18:30:00.000Z')
+    await upgraded.delete()
   })
 })
