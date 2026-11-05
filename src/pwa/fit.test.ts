@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // The installed iPhone app must fill the whole screen. With the see-through ("black-translucent")
 // status bar, iOS reports a window shorter than the screen by about the status bar's height, so
 // anything pinned to the bottom stops early. fitGap() measures that shortfall; fitToScreen()
