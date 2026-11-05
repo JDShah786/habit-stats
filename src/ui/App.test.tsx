@@ -1425,3 +1425,49 @@ describe('Settings: theme (step 8)', () => {
     expect(checked(sheet)).toHaveLength(1)
   })
 })
+
+describe('Settings: theme wipe (step 8)', () => {
+  const openSettings = async () => {
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'My habits' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    return { user, sheet: await screen.findByRole('dialog', { name: 'Settings' }) }
+  }
+  // The wipe is decorative (aria-hidden), like the menu wipe and the bubbles.
+  const wipe = () => document.querySelector<HTMLElement>('.wipe')
+
+  afterEach(() => {
+    delete document.documentElement.dataset.theme
+  })
+
+  it("with Reduce Motion off, picking a theme plays a wipe in that theme's colours, and the app switches under it", async () => {
+    reduceMotion = false
+    const { user, sheet } = await openSettings()
+    await user.click(within(sheet).getByRole('radio', { name: 'Royal' }))
+    // The wipe wears the new theme from its first frame; the app switches while it's covered.
+    expect(wipe()?.dataset.theme).toBe('royal')
+    expect(document.documentElement.dataset.theme).not.toBe('royal')
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('royal'), { timeout: 2000 })
+    await waitFor(() => expect(wipe()).toBeNull(), { timeout: 2000 })
+    expect(await store.theme()).toBe('royal')
+    // Settings is still open underneath, showing the new choice.
+    expect(within(screen.getByRole('dialog', { name: 'Settings' })).getByRole('radio', { name: 'Royal' }).getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('ignores a second theme tap while the theme wipe is running', async () => {
+    reduceMotion = false
+    const { user, sheet } = await openSettings()
+    await user.click(within(sheet).getByRole('radio', { name: 'Reload' }))
+    await user.click(within(sheet).getByRole('radio', { name: 'Revamp' }))
+    await waitFor(() => expect(wipe()).toBeNull(), { timeout: 2000 })
+    expect(document.documentElement.dataset.theme).toBe('reload')
+    expect(await store.theme()).toBe('reload')
+  })
+
+  it('with Reduce Motion on, the theme switches at once, with no wipe', async () => {
+    const { user, sheet } = await openSettings()
+    await user.click(within(sheet).getByRole('radio', { name: 'Revival' }))
+    expect(wipe()).toBeNull()
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe('revival'))
+  })
+})
