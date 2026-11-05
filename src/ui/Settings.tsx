@@ -1,12 +1,16 @@
-// Settings sheet (SPEC "Settings"): export all data to a file and import it back. Opened from
+// Settings sheet (SPEC "Settings"): the theme (step 8), and exporting all data to a file and
+// importing it back. Opened from
 // SETTINGS on My habits. Import is all or nothing: the file is checked first, then a confirm
 // step shows what's in it; REPLACE swaps everything in one transaction.
 
 import { motion } from 'motion/react'
 import { useEffect, useState, type ChangeEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { backupFileName, backupSummary, checkBackup, makeBackup, type Backup } from '../storage/backup'
 import type { Store } from '../storage/store'
 import { Sheet } from './Sheet'
+import { applyTheme, THEMES, type ThemeId } from './themes'
+import { Wipe } from './Wipe'
 
 interface Props {
   store: Store
@@ -104,6 +108,8 @@ export function SettingsSheet({ store, now, reduced, onRestored, onClose }: Prop
         <>
           <p className="muted backup-last">{last === undefined ? ' ' : last ? `Last backup: ${showDate(last)}` : 'No backup yet'}</p>
 
+          <ThemePicker store={store} reduced={reduced} />
+
           <div className="backup-action">
             <motion.button className="primary" whileTap={{ scale: 0.95 }} onClick={() => void exportBackup()}>
               Export backup
@@ -135,6 +141,73 @@ export function SettingsSheet({ store, now, reduced, onRestored, onClose }: Prop
         </>
       )}
     </Sheet>
+  )
+}
+
+// Theme (step 8): five scene tiles, one chosen. Picking one plays a wipe in the new theme's
+// colours and switches the app while the screen is covered (at once with Reduce Motion). A tap
+// during the wipe is ignored, like the menu.
+function ThemePicker({ store, reduced }: { store: Store; reduced: boolean }) {
+  const [current, setCurrent] = useState<ThemeId | null>(null)
+  const [wiping, setWiping] = useState<ThemeId | null>(null)
+
+  useEffect(() => {
+    let showing = true
+    void store.theme().then((t) => showing && setCurrent(t))
+    return () => {
+      showing = false
+    }
+  }, [store])
+
+  const commit = (theme: ThemeId) => {
+    applyTheme(theme)
+    setCurrent(theme)
+    void store.setTheme(theme)
+  }
+
+  const pick = (theme: ThemeId) => {
+    if (wiping || theme === current) return
+    if (reduced) commit(theme)
+    else setWiping(theme)
+  }
+
+  return (
+    <div className="theme-pick">
+      <p className="theme-pick-title" aria-hidden="true">
+        Theme
+      </p>
+      <div className="theme-row" role="radiogroup" aria-label="Theme">
+        {THEMES.map((t) => (
+          <motion.button
+            key={t.id}
+            role="radio"
+            aria-checked={current === t.id}
+            aria-label={t.name}
+            className="theme-opt"
+            whileTap={{ scale: 0.92 }}
+            onClick={() => pick(t.id)}
+          >
+            <span className="theme-tile" aria-hidden="true">
+              <span className={`tile-scene tile-${t.id}`}>
+                <i />
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+            </span>
+            <span className="theme-name" aria-hidden="true">
+              {t.name}
+            </span>
+          </motion.button>
+        ))}
+      </div>
+      {wiping &&
+        createPortal(
+          <Wipe direction={1} theme={wiping} onCovered={() => commit(wiping)} onDone={() => setWiping(null)} />,
+          document.body,
+        )}
+    </div>
   )
 }
 
