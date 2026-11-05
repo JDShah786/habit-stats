@@ -24,7 +24,7 @@ Every piece is free and runs on Windows. The rule behind each pick: popular, wel
 | Build tool | Vite | Runs a dev server, bundles the app | Fast, simple config, standard for new React apps |
 | Installable app | vite-plugin-pwa | Adds the manifest + service worker | Makes it installable on iPhone and work offline |
 | Storage | IndexedDB via Dexie.js | Database inside the browser on the phone | Sturdier and bigger than localStorage; Dexie makes it easy to query |
-| Animation | Motion (Framer Motion) | Every animation that reacts to touch: taps, screen changes, sheets, rank-ups | Simple API for Persona-style screen effects. A Lottie player may be added later for a few pre-drawn set pieces (not chosen yet) |
+| Animation | Motion (Framer Motion) | Every animation that reacts to touch: taps, screen changes, sheets, the points chart, rank-ups and graduation | Simple API for Persona-style screen effects. A Lottie player may be added later for a few pre-drawn set pieces (not chosen yet) |
 | Fonts | Montserrat via @fontsource/montserrat | Heavy italic headings, self-hosted | Free (OFL), works offline; body text uses the iPhone system font |
 | Tests | Vitest + React Testing Library + user-event + jsdom + fake-indexeddb | Runs our tests-first suite | Built for Vite; tests logic and screens; jsdom and fake-indexeddb (dev-only) run screen and storage tests in Node and CI |
 | Code home | GitHub | Stores code + history | Free, needed for hosting |
@@ -148,7 +148,7 @@ The app opens on a command menu: the words TODAY / LIBRARY / STATS / MY HABITS a
 | --- | --- | --- |
 | Menu | The four section words. "Today's list" card: the first 3 habits in Today order with minutes, "+N more", and "N OF M DAILY DONE" (hidden with no daily habits). An empty list says "Nothing on your list yet". | Tap a word, or the card for Today |
 | Today | Daily habits, then anytime, each A–Z, with minutes logged today. A habit with time today lights up; only daily habits get a tick. Below: the stat closest to its next rank ("COURAGE · NEXT: RANK 2" plus a bar; fewest points left, skipping maxed stats, ties in stat order). "Graduated" when all four are maxed. | Tap a habit to open the log sheet |
-| Log sheet | Habit name, weight chips ("Courage 70"), a big minutes number, quick bubbles 5/10/15/30/60 and CUSTOM, today's sessions with edit/delete, and LOG. After LOG the points float up ("+3 Courage") and the sheet stays open. Edits and deletes are silent. | Log, edit or delete today's sessions; close with ✕, a tap outside or a drag down |
+| Log sheet | Habit name, weight chips ("Courage 70"), a big minutes number, quick bubbles 5/10/15/30/60 and CUSTOM, today's sessions with edit/delete, and LOG. After LOG the points chart plays over the sheet, which stays open. Edits and deletes show no chart. | Log, edit or delete today's sessions; close with ✕, a tap outside or a drag down |
 | Stats | 4 cards: stat, RANK N or MAX, title, 5 pips, a bar through the current rank, and total points. A GRADUATED pill when all four are at 1000. Like the games, it never shows how many points the next rank takes. | View only |
 | Library | Search, then six category chips (opens on Fitness; remembers the last chip while the app is open). Presets only, A–Z, with their stats biggest weight first. Search matches names in every category. | + then DAILY/ANYTIME to add. A habit already on your list shows "ON LIST · DAILY/ANYTIME" |
 | My habits | YOUR LIST in Today order with stats, a DAILY/ANYTIME tag and a CUSTOM tag. YOUR CUSTOM HABITS: custom habits off your list (hidden when none). An empty list links to the Library. | Tap the tag to switch kind; remove (a toast offers UNDO for 5 s, latest remove only); add a custom habit back; + ADD CUSTOM HABIT |
@@ -161,8 +161,21 @@ The app opens on a command menu: the words TODAY / LIBRARY / STATS / MY HABITS a
 - **Show as:** DAILY (default) or ANYTIME.
 - **Save:** off until the total is 100. Creates the habit and adds it to your list.
 
-- **Rank-up moment:** full-screen, stat name, old → new rank and title, tap to dismiss. About 1.8 s; can be tapped away after 0.7 s; content in the middle of the screen. Original look inspired by Persona; no Persona art, fonts or sounds.
-- **Graduation moment:** when all four stats reach 1000, an animated "good job" message; the app then shows as Graduated. A single stat at 1000 gets the normal rank-up to Rank 5 and shows Max.
+- **Points chart:** after a LOG that earned points.
+  - **Look:** a dark dim, a black cross with lime edges, and a diamond radar of the four stats on top. Rings are ranks 1–5, and each corner sits at its rank plus progress, never point thresholds. Nodes at the cross's arm ends grow with rank (MAX when maxed). The caption shows the habit and the minutes just logged.
+  - **Beads:** one bead per point flies from the caption into its stat, one at a time, stat by stat. The more points, the faster they stream (110 ms ÷ log2 of the bead count; at most 40 beads a stat). Each landing ticks a "+N" tally and grows the shape. The bead that crosses a rank swells its node.
+  - **Closing:** about 0.9 s after the last bead. A tap (after 0.4 s) or Escape skips it.
+  - **Not shown** for edits, deletes, or a log that earns nothing.
+- **Rank-up moment:** full screen.
+  - **Shows:** RANK UP! (MAX RANK! at Rank 5), the stat, old → new rank, and the old title struck through → new title. Like the games, no threshold or next title. A max rank-up adds "MAXED · STOPS COUNTING".
+  - **Timing:** about 1.8 s; can be tapped away after 0.7 s. Content sits in the middle of the screen.
+  - **When:** after a log, once the points chart closes; after an edit, about 1 s later. The log sheet stays open under it. Several rank-ups from one change play one screen each, in stat order.
+  - Original look inspired by Persona; no Persona art, fonts or sounds.
+- **Graduation moment:** when all four stats reach 1000.
+  - **Shows:** GRADUATED! lands first and biggest, with impact frames (at most 2 bright flashes) and a burst of sparks. Then the four stats at MAX with their titles, GOOD JOB!, and "These habits are part of you now."
+  - **Timing:** about 2.4 s; can be tapped away after 1 s. It plays after any rank-ups from the same change.
+  - The app then shows as Graduated. A single stat at 1000 gets the normal rank-up to Rank 5 and shows Max.
+- **Keyboard and screen readers:** rank-up and graduation are named dialogs. TAP TO CONTINUE is a real button, locked until the moment can be tapped away. Escape or a tap anywhere also closes them. The points chart is announced as "Points earned" with each stat's gain.
 - **Settings:** export all data to a file and import it back (free backup). Opened from a SETTINGS button on My habits.
 
 ## Look and motion
@@ -172,8 +185,9 @@ The app opens on a command menu: the words TODAY / LIBRARY / STATS / MY HABITS a
 - **Shapes:** rounded pills, glossy bubbles, wave lines, a big tilted date block, tilted staggered panels, inverted lime highlights with hard offset shadows, and a faint giant background word that drifts slowly sideways.
 - **Type:** headings in Montserrat heavy italic; body in the iPhone system font.
 - **Tilt:** each item tilts on its own, never a whole list. All content fits at 360, 390 and 430 px widths.
-- **Motion:** taps, screen changes, sheets and rank-ups all animate. Button taps pop glossy bubbles.
-- **Reduce Motion:** respects the iPhone setting. Screens change at once, there are no bubbles, and the background word stays still.
+- **Motion:** taps, screen changes, sheets, the points chart and rank-ups all animate. Button taps pop glossy bubbles, drawn above every overlay.
+- **Reduce Motion:** respects the iPhone setting. Screens change at once, there are no bubbles, and the background word stays still. The points chart shows its final state, and rank-up and graduation fade in, with no beads, impact frames, sparks or shake.
+- **Smooth on phones:** no full-screen blur or SVG filters in animations, and the background loops pause while an overlay covers them.
 
 ## Workflow
 
