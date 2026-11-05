@@ -27,6 +27,7 @@ const R = 104
 const AXES: Record<Stat, [number, number]> = { charm: [0, -1], courage: [1, 0], intelligence: [0, 1], proficiency: [-1, 0] }
 const at = (stat: Stat, v: number): [number, number] => [C + AXES[stat][0] * R * (v / 5), C + AXES[stat][1] * R * (v / 5)]
 const shapePoints = (levels: Record<Stat, number>) => STATS.map((s) => at(s, levels[s]).join(',')).join(' ')
+const levelsOf = (points: StatPoints) => Object.fromEntries(STATS.map((s) => [s, level(points[s])])) as Record<Stat, number>
 const nodeRadius = (rank: number) => 9 + rank * 2.6
 const rankText = (points: number) => (rankOf(points) === 5 ? 'MAX' : String(rankOf(points)))
 // The cross behind it all: arms 44 wide, each ending just past a stat node.
@@ -48,7 +49,7 @@ export const PointsOverlay = memo(function PointsOverlay({ caption, before, afte
   const earned = gains(before, after)
   // The first render shows where the stats start; with Reduce Motion, where they end.
   const shown = reduced ? after : before
-  const startLevels = Object.fromEntries(STATS.map((s) => [s, level(shown[s])])) as Record<Stat, number>
+  const startLevels = levelsOf(shown)
 
   const close = async () => {
     if (closing.current) return
@@ -89,11 +90,11 @@ export const PointsOverlay = memo(function PointsOverlay({ caption, before, afte
 
       // 2. One bead per point, stat by stat, straight from the caption into the node.
       const from = centerOf(one('.pc-tag'))
-      const grow = { ...startLevels }
+      const grow = levelsOf(before)
       const rankNow = Object.fromEntries(STATS.map((s) => [s, rankOf(before[s])])) as Record<Stat, number>
       const flights: Promise<void>[] = []
       let launch = 0
-      for (const [stat, total] of earned) {
+      for (const [stat, total] of gains(before, after)) {
         const values = beadValues(total)
         let landed = 0
         for (const value of values) {
@@ -174,8 +175,8 @@ export const PointsOverlay = memo(function PointsOverlay({ caption, before, afte
       document.removeEventListener('keydown', listener)
       document.querySelectorAll('.pc-bead').forEach((bead) => bead.remove())
     }
-    // Plays once per chart (each chart gets its own key).
-  }, [])
+    // Plays once per chart: each chart gets its own key, and its props never change.
+  }, [reduced, before, after])
 
   return createPortal(
     <div ref={root} className="pc" role="status" aria-label="Points earned" onClick={skip}>
