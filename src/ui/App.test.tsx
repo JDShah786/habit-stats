@@ -1380,3 +1380,48 @@ describe('rank-up and graduation', () => {
     })
   })
 })
+
+describe('Settings: theme (step 8)', () => {
+  const openSettings = async () => {
+    const user = renderOnMenu()
+    await user.click(within(await menu()).getByRole('button', { name: 'My habits' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    return { user, sheet: await screen.findByRole('dialog', { name: 'Settings' }) }
+  }
+  const themes = (sheet: HTMLElement) => within(within(sheet).getByRole('radiogroup', { name: 'Theme' })).getAllByRole('radio')
+  const checked = (sheet: HTMLElement) => themes(sheet).filter((t) => t.getAttribute('aria-checked') === 'true')
+
+  afterEach(() => {
+    delete document.documentElement.dataset.theme
+  })
+
+  it('shows a Theme choice with the five themes, Redux selected by default', async () => {
+    const { sheet } = await openSettings()
+    await waitFor(() => expect(checked(sheet).map((t) => t.getAttribute('aria-label') ?? t.textContent)).toEqual(['Redux']))
+    expect(themes(sheet).map((t) => t.getAttribute('aria-label') ?? t.textContent)).toEqual(['Redux', 'Royal', 'Reload', 'Revival', 'Revamp'])
+  })
+
+  it('tapping Royal selects it, recolours the app at once, and saves it', async () => {
+    const { user, sheet } = await openSettings()
+    await user.click(within(sheet).getByRole('radio', { name: 'Royal' }))
+    await waitFor(() => expect(store.theme()).resolves.toBe('royal'))
+    expect(document.documentElement.dataset.theme).toBe('royal')
+    expect(within(sheet).getByRole('radio', { name: 'Royal' }).getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('only one theme is ever selected', async () => {
+    const { user, sheet } = await openSettings()
+    await user.click(within(sheet).getByRole('radio', { name: 'Reload' }))
+    await user.click(within(sheet).getByRole('radio', { name: 'Revamp' }))
+    await waitFor(() => expect(checked(sheet)).toHaveLength(1))
+    expect(checked(sheet)[0]).toBe(within(sheet).getByRole('radio', { name: 'Revamp' }))
+    await waitFor(() => expect(store.theme()).resolves.toBe('revamp'))
+  })
+
+  it('shows the saved theme as selected when Settings opens', async () => {
+    await store.setTheme('revival')
+    const { sheet } = await openSettings()
+    await waitFor(() => expect(within(sheet).getByRole('radio', { name: 'Revival' }).getAttribute('aria-checked')).toBe('true'))
+    expect(checked(sheet)).toHaveLength(1)
+  })
+})

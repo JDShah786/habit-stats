@@ -371,3 +371,33 @@ describe('install hint dismissal (step 7)', () => {
     expect(await createStore(db, () => TODAY).installHintDismissed()).toBe(true)
   })
 })
+
+describe('theme (step 8)', () => {
+  it('is Redux when nothing is saved', async () => {
+    expect(await store.theme()).toBe('redux')
+  })
+
+  it('saves the chosen theme, and it comes back after the app reopens', async () => {
+    await store.setTheme('royal')
+    expect(await store.theme()).toBe('royal')
+    expect(await createStore(db, () => TODAY).theme()).toBe('royal')
+  })
+
+  it('refuses an unknown theme and keeps the current one', async () => {
+    await store.setTheme('reload')
+    await expect(store.setTheme('neon' as never)).rejects.toThrow()
+    expect(await store.theme()).toBe('reload')
+  })
+
+  it('falls back to Redux if the saved value is unknown (e.g. from a future version)', async () => {
+    await db.settings.put({ key: 'theme', value: 'hologram' })
+    expect(await store.theme()).toBe('redux')
+  })
+
+  it('is not part of a backup: exporting leaves it out, and importing keeps the phone theme', async () => {
+    await store.setTheme('revival')
+    expect(JSON.stringify(await store.allData())).not.toContain('revival')
+    await store.replaceAll({ customHabits: [], activeHabits: [], sessions: [], awards: [] })
+    expect(await store.theme()).toBe('revival')
+  })
+})
