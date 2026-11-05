@@ -420,22 +420,38 @@ body:has(.pc, .moment) .marquee {
   right: 0;
   top: calc(196px + var(--safe-top));
   bottom: 0;
-  overflow: clip; /* see .stage */
+  /* The swipe: a native horizontal scroll that snaps one section at a time. The phone's graphics
+     engine runs it, so it stays smooth while the app is busy. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* Reduce Motion: no swiping; tapping the strip jumps straight to a section. */
+.viewport.no-swipe {
+  overflow-x: hidden;
 }
 
 .track {
   display: flex;
   width: 400%;
   height: 100%;
-  /* Its own graphics layer, so a swipe only moves pixels instead of repainting the sections. */
-  will-change: transform;
 }
 
 .pane {
   flex: 0 0 25%;
   height: 100%;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  /* Vertical only: a horizontal swipe that starts in a section must reach the section scroll. */
+  overscroll-behavior-y: contain;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   padding: 18px 18px calc(40px + var(--safe-bottom));
   scrollbar-width: none;
 }
