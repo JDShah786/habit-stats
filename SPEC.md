@@ -1,11 +1,11 @@
-# Habit Stats App — Spec v1
+# Meta Log — Spec v1
 
 Oct 27, 2026 · Hamid Shah
 Originally drafted in: https://claude.ai/artifact/BfwNeF2ticBYJUzXVYq6pU (history only — this file is now the source of truth)
 
 ## Overview
 
-A free iPhone habit tracker that turns time spent on habits into Persona-style social stats. You log timed habits; each habit feeds one or more of four stats (Charm, Courage, Intelligence, Proficiency); stats rank up from 1 to 5 over roughly 6–12 months. At Rank 5 (1000 points) a stat is maxed and stops counting. When all four stats are maxed you "graduate": the app congratulates you, because by then the habits are part of you.
+**Meta Log** is a free iPhone habit tracker that turns time spent on habits into Persona-style social stats. You log timed habits; each habit feeds one or more of four stats (Charm, Courage, Intelligence, Proficiency); stats rank up from 1 to 5 over roughly 6–12 months. At Rank 5 (1000 points) a stat is maxed and stops counting. When all four stats are maxed you "graduate": the app congratulates you, because by then the habits are part of you.
 
 - **Cost:** $0 to build, host and use
 - **Device:** iPhone, installed from Safari to the Home Screen (PWA)
@@ -178,7 +178,7 @@ The app opens on a command menu: the words TODAY / LIBRARY / STATS / MY HABITS a
   - The app then shows as Graduated. A single stat at 1000 gets the normal rank-up to Rank 5 and shows Max.
 - **Keyboard and screen readers:** rank-up and graduation are named dialogs. TAP TO CONTINUE is a real button, locked until the moment can be tapped away. Escape or a tap anywhere also closes them. The points chart is announced as "Points earned" with each stat's gain.
 - **Settings:** a bottom sheet opened from a SETTINGS button on My habits. It shows "Last backup: <date>" (or "No backup yet").
-  - **Export:** saves a JSON file, `habit-stats-backup-YYYY-MM-DD.json`, holding every table plus the app name, a format version and the export time. It opens the iPhone share sheet, or downloads where there's none. Only a completed export counts as a backup.
+  - **Export:** saves a JSON file, `meta-log-backup-YYYY-MM-DD.json`, holding every table plus the app name, a format version and the export time. It opens the iPhone share sheet, or downloads where there's none. Only a completed export counts as a backup.
   - **Import:** replaces all data, all or nothing.
     - The file is checked first against this spec's rules: format and version, sessions, awards, your list and custom habits. Any problem imports nothing and says why.
     - Stored points aren't re-checked by replaying sessions, since preset weights may change between versions.
@@ -227,3 +227,4 @@ Accounts, cloud sync, App Store, reminders/notifications, streaks, history/calen
 - **Removing a habit:** hides it from your list; its sessions and points are never wiped.
 - **Daily vs anytime:** no missed marker.
 - **Backup:** export/import in v1; import replaces everything, all or nothing.
+- **Name:** Meta Log (renamed from Habit Stats on 2026-11-04). The on-phone database and the backup format id keep their first name, `habit-stats`, so no data is lost and older backups still import.
