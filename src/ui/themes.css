@@ -1,0 +1,668 @@
+/* Themes (step 8). The page root carries data-theme; each block below redefines app.css's colour
+   tokens and draws the theme's static background by restyling the background layer (the .stage
+   gradient, .decor's two pseudo-elements, .stripe and its pseudo-elements, and the five .bub
+   bubbles). CSS shapes only: no images, no filters, nothing taken from a game.
+   A block also applies to the theme wipe, which carries data-theme to paint its bars in the theme
+   it's switching to; so every block sets the full palette, Redux included. */
+
+/* ---- Palettes ---- */
+
+[data-theme='redux'] {
+  --bg: #050807;
+  --depth: #0d1f12;
+  --g: #39ff7a;
+  --lime: #c6ff3d;
+  --ink: #ffffff;
+  --muted: #9bb8a2;
+  --black: #000000;
+  --warn: #ff8a7a;
+}
+
+[data-theme='royal'] {
+  --bg: #080203;
+  --depth: #4d050c;
+  --g: #e5191c;
+  --lime: #ff4b3a;
+  --ink: #ffffff;
+  --muted: #cfa9a9;
+  --black: #000000;
+  --warn: #ffd400; /* error text stays visible against red */
+  --edge: #ffffff;
+  --edge2: #ffffff;
+  --p1: #e5191c;
+  --p2: #ffffff;
+  --p3: #ff4b3a;
+  --p4: #ffffff;
+  --ghost: rgb(0 0 0 / 0.42);
+}
+
+/* Light: blue and white only. Panels are deep navy instead of black. */
+[data-theme='reload'] {
+  --bg: #0f52c4;
+  --depth: #2a8cf2;
+  --g: #7fe3ff;
+  --lime: #e6fbff;
+  --ink: #ffffff;
+  --muted: #bcd6f5;
+  --black: #061b4d;
+  --warn: #ff8a7a;
+  --edge: #ffffff;
+  --edge2: #0a3a9e;
+  --p1: #7fe3ff;
+  --p2: #ffffff;
+  --p3: #2b9bff;
+  --p4: #bfefff;
+  --label: #ffffff;
+  --on-muted: #ffffff;
+  --ghost: rgb(6 27 77 / 0.45);
+}
+
+/* Light: shining gold. Panels and text on the background are deep plum; pills are orange so they
+   stand out on gold. */
+[data-theme='revival'] {
+  --bg: #ffc414;
+  --depth: #4a2650;
+  --g: #ff8a00;
+  --lime: #ffb700;
+  --ink: #ffffff;
+  --muted: #dcc6a6;
+  --black: #2b1636;
+  --warn: #ff6a5a;
+  --edge: #ffffff;
+  --edge2: #e8323c;
+  --p1: #ffffff;
+  --p2: #ff8a00;
+  --p3: #e8323c;
+  --p4: #ffe100;
+  --label: #2b1636;
+  --on-bg: #2b1636;
+  --on-muted: #2b1636;
+  --part: #2b1636;
+  --ghost: rgb(255 255 255 / 0.45);
+}
+
+/* Original: violet space. Edges and particles borrow from the other four themes. */
+[data-theme='revamp'] {
+  --bg: #07040d;
+  --depth: #24103f;
+  --g: #9d5cff;
+  --lime: #ff6fd8;
+  --ink: #ffffff;
+  --muted: #b9a6cf;
+  --black: #000000;
+  --warn: #ff8a7a;
+  --edge: #ffd23d;
+  --edge2: #3db2ff;
+  --p1: #e5191c;
+  --p2: #2b9bff;
+  --p3: #ffe100;
+  --p4: #39ff7a;
+}
+
+/* Particles (tap bubbles, sparks, beads) cycle through the theme's four colours. Redux keeps its
+   original green-and-lime particles. */
+:root[data-theme]:not([data-theme='redux']) :is(.pop, .spark, .pc-bead):nth-of-type(4n + 1) {
+  --g: var(--p1);
+  --lime: var(--p1);
+}
+:root[data-theme]:not([data-theme='redux']) :is(.pop, .spark, .pc-bead):nth-of-type(4n + 2) {
+  --g: var(--p2);
+  --lime: var(--p2);
+}
+:root[data-theme]:not([data-theme='redux']) :is(.pop, .spark, .pc-bead):nth-of-type(4n + 3) {
+  --g: var(--p3);
+  --lime: var(--p3);
+}
+:root[data-theme]:not([data-theme='redux']) :is(.pop, .spark, .pc-bead):nth-of-type(4n + 4) {
+  --g: var(--p4);
+  --lime: var(--p4);
+}
+
+/* ---- Backgrounds ---- */
+
+/* Royal: a red halftone slab with a zigzag edge, a black-and-white starburst panel, a zigzag band,
+   two "sticker" boxes (ransom-note style, no letters), stars and a black giant word. */
+:root[data-theme='royal'] .stage {
+  background:
+    radial-gradient(35% 22% at 18% 34%, rgb(0 0 0 / 0.35), transparent 70%),
+    radial-gradient(30% 18% at 70% 62%, rgb(0 0 0 / 0.3), transparent 70%),
+    radial-gradient(40% 25% at 30% 80%, rgb(255 40 40 / 0.18), transparent 70%),
+    linear-gradient(160deg, #9e0b14 0%, #5c050b 34%, #1c0205 70%, #080203 100%);
+}
+:root[data-theme='royal'] .decor::before,
+:root[data-theme='royal'] .decor::after {
+  content: '';
+  position: absolute;
+  clip-path: polygon(16% 0, 100% 0, 100% 100%, 0 100%, 10% 92%, 1% 84%, 11% 76%, 2% 68%, 12% 60%, 3% 52%, 13% 44%, 4% 36%, 14% 28%, 5% 20%, 15% 12%, 6% 5%);
+}
+:root[data-theme='royal'] .decor::before {
+  top: -60px;
+  right: -150px;
+  width: 380px;
+  height: 600px;
+  rotate: 16deg;
+  opacity: 0.6;
+  background:
+    radial-gradient(circle, rgb(0 0 0 / 0.45) 1.6px, transparent 2.2px) 0 0 / 9px 9px,
+    linear-gradient(160deg, #ff2a2a, #a50a12);
+}
+:root[data-theme='royal'] .decor::after {
+  right: -130px;
+  top: 330px;
+  width: 310px;
+  height: 600px;
+  rotate: 10deg;
+  opacity: 0.3;
+  background: repeating-conic-gradient(from 0deg at 25% 40%, #fff 0 7deg, #000 7deg 14deg);
+}
+:root[data-theme='royal'] .stripe {
+  top: 250px;
+  height: 34px;
+  opacity: 1;
+  rotate: -14deg;
+  background:
+    linear-gradient(135deg, rgb(0 0 0 / 0.5) 25%, transparent 25%) -12px 0 / 24px 24px,
+    linear-gradient(225deg, rgb(0 0 0 / 0.5) 25%, transparent 25%) -12px 0 / 24px 24px,
+    linear-gradient(315deg, rgb(0 0 0 / 0.5) 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(45deg, rgb(0 0 0 / 0.5) 25%, transparent 25%) 0 0 / 24px 24px,
+    rgb(255 255 255 / 0.2);
+}
+:root[data-theme='royal'] .stripe::before,
+:root[data-theme='royal'] .stripe::after {
+  content: '';
+  position: absolute;
+}
+:root[data-theme='royal'] .stripe::before {
+  left: 66%;
+  top: -150px;
+  width: 84px;
+  height: 30px;
+  background: #000;
+  border: 3px solid #fff;
+  rotate: 10deg;
+  box-shadow: 4px 4px 0 #e5191c;
+  opacity: 0.75;
+}
+:root[data-theme='royal'] .stripe::after {
+  left: 8%;
+  top: 300px;
+  width: 64px;
+  height: 24px;
+  background: #fff;
+  border: 3px solid #000;
+  rotate: -8deg;
+  opacity: 0.55;
+}
+:root[data-theme='royal'] .bub {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background: #fff;
+  opacity: 0.16;
+}
+:root[data-theme='royal'] .bub:nth-child(odd) {
+  background: #000;
+  opacity: 0.45;
+}
+
+/* Reload: sunlit water. A bright surface deepening to royal blue, a wide white light band with a
+   thin white line, light rays, a big white ring arcing in from the left, waves, glassy bubbles and
+   a navy giant word. */
+:root[data-theme='reload'] .stage {
+  background:
+    linear-gradient(166deg, transparent 0 47%, rgb(255 255 255 / 0.22) 47% 55%, transparent 55%),
+    linear-gradient(166deg, transparent 0 56%, rgb(255 255 255 / 0.85) 56% 56.4%, transparent 56.4%),
+    linear-gradient(180deg, #74d4ff 0%, #2f96f7 26%, #1a6ee3 52%, #1159cc 78%, #0d4cc4 100%);
+}
+:root[data-theme='reload'] .decor::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 30% 0;
+  background: repeating-linear-gradient(100deg, rgb(255 255 255 / 0.22) 0 22px, transparent 22px 70px);
+  -webkit-mask-image: linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, transparent);
+}
+:root[data-theme='reload'] .decor::after {
+  content: '';
+  position: absolute;
+  left: -330px;
+  top: 390px;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  border: 30px solid rgb(255 255 255 / 0.88);
+  box-shadow:
+    0 0 0 16px rgb(255 255 255 / 0.2),
+    inset 0 0 0 46px rgb(255 255 255 / 0.1);
+}
+:root[data-theme='reload'] .stripe {
+  top: 600px;
+  height: 90px;
+  rotate: 0deg;
+  opacity: 1;
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'240'%20height%3D'40'%3E%3Cpath%20d%3D'M0%2020%20Q30%204%2060%2020%20T120%2020%20T180%2020%20T240%2020'%20fill%3D'none'%20stroke%3D'rgba(255%2C255%2C255%2C.6)'%20stroke-width%3D'2'%2F%3E%3C%2Fsvg%3E") 0 0 / 240px 40px repeat-x,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'240'%20height%3D'40'%3E%3Cpath%20d%3D'M0%2020%20Q30%204%2060%2020%20T120%2020%20T180%2020%20T240%2020'%20fill%3D'none'%20stroke%3D'rgba(191%2C243%2C255%2C.6)'%20stroke-width%3D'1.2'%2F%3E%3C%2Fsvg%3E") 100px 44px / 240px 40px repeat-x;
+}
+:root[data-theme='reload'] .stripe::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -310px;
+  height: 140px;
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'240'%20height%3D'40'%3E%3Cpath%20d%3D'M0%2020%20Q30%204%2060%2020%20T120%2020%20T180%2020%20T240%2020'%20fill%3D'none'%20stroke%3D'rgba(255%2C255%2C255%2C.7)'%20stroke-width%3D'2.5'%2F%3E%3C%2Fsvg%3E") 0 0 / 240px 40px repeat-x,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'240'%20height%3D'40'%3E%3Cpath%20d%3D'M0%2020%20Q30%204%2060%2020%20T120%2020%20T180%2020%20T240%2020'%20fill%3D'none'%20stroke%3D'rgba(191%2C243%2C255%2C.6)'%20stroke-width%3D'1.5'%2F%3E%3C%2Fsvg%3E") 60px 46px / 240px 40px repeat-x,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'240'%20height%3D'40'%3E%3Cpath%20d%3D'M0%2020%20Q30%204%2060%2020%20T120%2020%20T180%2020%20T240%2020'%20fill%3D'none'%20stroke%3D'rgba(255%2C255%2C255%2C.55)'%20stroke-width%3D'3'%2F%3E%3C%2Fsvg%3E") 20px 92px / 240px 40px repeat-x;
+}
+:root[data-theme='reload'] .bub {
+  opacity: 0.8;
+  background: radial-gradient(circle at 30% 30%, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.3) 40%, rgb(255 255 255 / 0.08) 70%, transparent 72%);
+}
+
+/* Revival: a sun in a blue sky that fades into shining gold, white rays pouring over both, a red
+   double slash, a plum swoosh, confetti, two pale bokeh circles, red and white sparkles and a
+   faded white giant word. The sky has no hard edge: a soft mask fades it into the gold. */
+:root[data-theme='revival'] .stage {
+  background: radial-gradient(130% 85% at 92% 0%, #fffbe6 0%, #fff27a 14%, #ffdc3a 36%, #ffc414 68%, #ffae00 100%);
+}
+:root[data-theme='revival'] .decor::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 360px;
+  background:
+    radial-gradient(closest-side, #fff 55%, rgb(255 255 255 / 0)) 210px 92px / 130px 54px no-repeat,
+    radial-gradient(closest-side, #fff 55%, rgb(255 255 255 / 0)) 262px 70px / 110px 62px no-repeat,
+    radial-gradient(closest-side, #fff 55%, rgb(255 255 255 / 0)) 300px 108px / 120px 48px no-repeat,
+    radial-gradient(closest-side, rgb(255 255 255 / 0.9) 50%, rgb(255 255 255 / 0)) 250px 168px / 90px 34px no-repeat,
+    radial-gradient(closest-side, rgb(255 255 255 / 0.85) 50%, rgb(255 255 255 / 0)) 330px 22px / 80px 36px no-repeat,
+    linear-gradient(205deg, #2a8cff 0%, #5fb2ff 30%, #b9e2ff 52%, rgb(255 244 180 / 0) 78%);
+  -webkit-mask-image: radial-gradient(150% 115% at 100% 0%, #000 32%, transparent 72%);
+  mask-image: radial-gradient(150% 115% at 100% 0%, #000 32%, transparent 72%);
+}
+:root[data-theme='revival'] .decor::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(170px 170px at 92% 0%, #fff 0, rgb(255 255 255 / 0.9) 28%, rgb(255 250 210 / 0.4) 60%, transparent 100%),
+    repeating-conic-gradient(from 0deg at 92% 0%, rgb(255 255 255 / 0.42) 0 4deg, transparent 4deg 11deg);
+  -webkit-mask-image: radial-gradient(150% 95% at 92% 0%, #000 30%, transparent 80%);
+  mask-image: radial-gradient(150% 95% at 92% 0%, #000 30%, transparent 80%);
+}
+:root[data-theme='revival'] .stripe {
+  top: 262px;
+  height: 20px;
+  opacity: 1;
+  rotate: -14deg;
+  background: linear-gradient(rgb(232 50 60 / 0.9) 0 7px, transparent 7px 13px, rgb(232 50 60 / 0.9) 13px 16px, transparent 16px);
+}
+:root[data-theme='revival'] .stripe::before {
+  content: '';
+  position: absolute;
+  left: 52%;
+  top: 330px;
+  width: 330px;
+  height: 170px;
+  border-radius: 120px 0 0 120px;
+  background: linear-gradient(90deg, #5a2d62, #2b1636 70%);
+  box-shadow: -6px 6px 0 #fff;
+}
+:root[data-theme='revival'] .stripe::after {
+  content: '';
+  position: absolute;
+  left: 6%;
+  top: -210px;
+  width: 320px;
+  height: 200px;
+  background:
+    linear-gradient(#e8323c, #e8323c) 20px 30px / 12px 5px no-repeat,
+    linear-gradient(#fff, #fff) 130px 12px / 14px 5px no-repeat,
+    linear-gradient(#ff8a00, #ff8a00) 210px 64px / 10px 5px no-repeat,
+    linear-gradient(#fff, #fff) 60px 150px / 12px 5px no-repeat,
+    linear-gradient(#e8323c, #e8323c) 270px 160px / 14px 5px no-repeat,
+    linear-gradient(#2b1636, #2b1636) 170px 110px / 10px 5px no-repeat;
+}
+:root[data-theme='revival'] .bub {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  background: #e8323c;
+  opacity: 0.85;
+  scale: 0.42;
+}
+:root[data-theme='revival'] .bub:nth-child(odd) {
+  background: #fff;
+  opacity: 0.9;
+}
+:root[data-theme='revival'] .bub:nth-child(2),
+:root[data-theme='revival'] .bub:nth-child(4) {
+  clip-path: none;
+  border-radius: 50%;
+  scale: 1;
+  opacity: 1;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.18) 60%, transparent 71%);
+}
+
+/* Revamp: space. A starfield, a nebula, a milky band, a ringed planet and small moons in the
+   other four themes' colours. */
+:root[data-theme='revamp'] .stage {
+  background:
+    radial-gradient(80% 45% at 90% 8%, #4a2390, transparent 70%),
+    radial-gradient(70% 40% at 0% 62%, rgb(61 178 255 / 0.2), transparent 70%),
+    radial-gradient(70% 38% at 80% 88%, rgb(255 111 216 / 0.2), transparent 70%),
+    #07040d;
+}
+:root[data-theme='revamp'] .decor::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.9;
+  background:
+    radial-gradient(1.6px 1.6px at 22px 34px, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 96px 12px, #fff, transparent),
+    radial-gradient(1px 1px at 140px 90px, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 60px 130px, #ffd23d, transparent),
+    radial-gradient(1px 1px at 120px 150px, #9eefff, transparent);
+  background-size: 170px 170px;
+}
+:root[data-theme='revamp'] .decor::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background:
+    radial-gradient(1px 1px at 10px 20px, #fff, transparent),
+    radial-gradient(1px 1px at 70px 60px, #fff, transparent),
+    radial-gradient(0.8px 0.8px at 40px 95px, #fff, transparent);
+  background-size: 110px 110px;
+}
+:root[data-theme='revamp'] .stripe {
+  top: 170px;
+  height: 150px;
+  opacity: 1;
+  rotate: -14deg;
+  background: linear-gradient(90deg, transparent, rgb(157 92 255 / 0.18) 30%, rgb(61 178 255 / 0.14) 60%, transparent);
+}
+:root[data-theme='revamp'] .bub {
+  opacity: 0.9;
+  scale: 0.5;
+  background: radial-gradient(circle at 32% 30%, #fff 0 6%, var(--moon) 30%, color-mix(in srgb, var(--moon) 30%, #07040d) 80%);
+}
+:root[data-theme='revamp'] .bub:nth-child(2) {
+  scale: 1;
+  opacity: 1;
+  overflow: visible;
+  background: radial-gradient(circle at 35% 32%, #ffd0f4 0 5%, #c27bff 35%, #3a1a6a 78%);
+}
+:root[data-theme='revamp'] .bub:nth-child(2)::after {
+  content: '';
+  position: absolute;
+  inset: 38% -28%;
+  border-radius: 50%;
+  border: 3px solid #ffd23d;
+  rotate: -18deg;
+  opacity: 0.85;
+}
+:root[data-theme='revamp'] .bub:nth-child(3) {
+  --moon: #2b9bff;
+}
+:root[data-theme='revamp'] .bub:nth-child(4) {
+  --moon: #e5191c;
+}
+:root[data-theme='revamp'] .bub:nth-child(5) {
+  --moon: #ffe100;
+}
+:root[data-theme='revamp'] .bub:nth-child(6) {
+  --moon: #39ff7a;
+}
+
+/* ---- Theme picker (Settings) ---- */
+
+.theme-pick {
+  display: grid;
+  gap: 10px;
+}
+
+.theme-pick-title {
+  margin: 0;
+  font: 900 italic 15px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g);
+}
+
+.theme-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.theme-opt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+/* The frame: faint, or white and lifted when chosen. */
+.theme-tile {
+  display: block;
+  padding: 3px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.18);
+  transition:
+    translate 140ms ease-out,
+    background 140ms ease-out;
+}
+.theme-opt[aria-checked='true'] .theme-tile {
+  background: #fff;
+  translate: 0 -3px;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.theme-name {
+  font: 700 italic 10px var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.theme-opt[aria-checked='true'] .theme-name {
+  font-weight: 900;
+  color: #fff;
+}
+
+/* Each scene: the theme's base colour plus a pinch of its background. */
+.tile-scene {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: min(52px, 12vw);
+  aspect-ratio: 1;
+  border-radius: 11px;
+}
+.tile-scene i {
+  position: absolute;
+  display: none;
+}
+
+/* Redux: a glowing grid, a diamond and data dashes. */
+.tile-redux {
+  background:
+    linear-gradient(rgb(57 255 122 / 0.35) 1px, transparent 1px) 0 0 / 9px 9px,
+    linear-gradient(90deg, rgb(57 255 122 / 0.35) 1px, transparent 1px) 0 0 / 9px 9px,
+    radial-gradient(circle at 50% 50%, rgb(57 255 122 / 0.35), transparent 65%),
+    linear-gradient(135deg, #0d1f12, #050807);
+}
+.tile-redux i:nth-child(1) {
+  display: block;
+  left: 32%;
+  top: 32%;
+  width: 36%;
+  height: 36%;
+  border: 2px solid #c6ff3d;
+  rotate: 45deg;
+  box-shadow: 0 0 8px #39ff7a;
+}
+.tile-redux i:nth-child(2) {
+  display: block;
+  left: 44%;
+  top: 44%;
+  width: 14%;
+  height: 14%;
+  background: #39ff7a;
+}
+.tile-redux i:nth-child(3),
+.tile-redux i:nth-child(4),
+.tile-redux i:nth-child(5) {
+  display: block;
+  width: 2px;
+  background: #39ff7a;
+  opacity: 0.8;
+}
+.tile-redux i:nth-child(3) {
+  left: 12%;
+  top: 12%;
+  height: 22%;
+  background: #c6ff3d;
+}
+.tile-redux i:nth-child(4) {
+  right: 14%;
+  bottom: 10%;
+  height: 30%;
+}
+.tile-redux i:nth-child(5) {
+  right: 25%;
+  top: 15%;
+  height: 15%;
+  opacity: 0.6;
+}
+
+/* Royal: red halftone, a zigzag bottom edge, a starburst corner and a white star. */
+.tile-royal {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 88% 92%, 76% 100%, 64% 92%, 52% 100%, 40% 92%, 28% 100%, 16% 92%, 4% 100%, 0 92%);
+  background:
+    repeating-conic-gradient(from 0deg at 100% 100%, #fff 0 9deg, #000 9deg 18deg) right bottom / 58% 58% no-repeat,
+    radial-gradient(circle, rgb(0 0 0 / 0.45) 1.2px, transparent 1.7px) 0 0 / 6px 6px,
+    linear-gradient(160deg, #ff2a2a, #9e0b14 60%, #3a0307);
+}
+.tile-royal i:nth-child(1) {
+  display: block;
+  left: 13%;
+  top: 13%;
+  width: 35%;
+  height: 35%;
+  background: #fff;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.tile-royal i:nth-child(2) {
+  display: block;
+  left: -12%;
+  top: 58%;
+  width: 77%;
+  height: 15%;
+  background: #000;
+  rotate: -20deg;
+  border-block: 2px solid #fff;
+}
+
+/* Reload: sunlit water, rays, waves, a white ring arc and bubbles. */
+.tile-reload {
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'28'%20height%3D'10'%3E%3Cpath%20d%3D'M0%205%20Q7%200%2014%205%20T28%205'%20fill%3D'none'%20stroke%3D'rgba(255%2C255%2C255%2C.9)'%20stroke-width%3D'1.6'%2F%3E%3C%2Fsvg%3E") 0 58% / 28px 10px repeat-x,
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'28'%20height%3D'10'%3E%3Cpath%20d%3D'M0%205%20Q7%200%2014%205%20T28%205'%20fill%3D'none'%20stroke%3D'rgba(191%2C243%2C255%2C.8)'%20stroke-width%3D'1.6'%2F%3E%3C%2Fsvg%3E") 6px 78% / 28px 10px repeat-x,
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 0.22) 0 4px, transparent 4px 12px),
+    linear-gradient(180deg, #74d4ff, #1a6ee3 60%, #0d4cc4);
+}
+.tile-reload i:nth-child(1) {
+  display: block;
+  left: -50%;
+  top: 42%;
+  width: 85%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 5px solid rgb(255 255 255 / 0.9);
+}
+.tile-reload i:nth-child(2),
+.tile-reload i:nth-child(3) {
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, rgb(255 255 255 / 0.3) 45%, rgb(255 255 255 / 0.1) 70%);
+}
+.tile-reload i:nth-child(2) {
+  right: 15%;
+  top: 15%;
+  width: 21%;
+  height: 21%;
+}
+.tile-reload i:nth-child(3) {
+  right: 35%;
+  top: 38%;
+  width: 12%;
+  height: 12%;
+}
+
+/* Revival: a sun with rays over gold, a hint of blue sky, a red slash and a small cloud. */
+.tile-revival {
+  background:
+    radial-gradient(circle at 100% 0, #fff 0 17%, rgb(255 255 255 / 0.7) 27%, transparent 46%),
+    repeating-conic-gradient(from 180deg at 100% 0, rgb(255 255 255 / 0.5) 0 6deg, transparent 6deg 14deg),
+    linear-gradient(166deg, transparent 0 68%, #e8323c 68% 72%, transparent 72% 75%, #e8323c 75% 77%, transparent 77%),
+    radial-gradient(75% 65% at 100% 0, #3a95ff 0, #9fd4ff 40%, transparent 72%),
+    radial-gradient(130% 120% at 100% 0, #fff27a, #ffc414 60%, #ffae00);
+}
+.tile-revival i:nth-child(1) {
+  display: block;
+  left: 12%;
+  top: 27%;
+  width: 38%;
+  height: 17%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #fff 55%, rgb(255 255 255 / 0));
+}
+
+/* Revamp: violet space, stars, a pink nebula glow, a ringed planet and a small blue moon. */
+.tile-revamp {
+  background:
+    radial-gradient(1.4px 1.4px at 15% 19%, #fff, transparent),
+    radial-gradient(1px 1px at 77% 15%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 92% 85%, #fff, transparent),
+    radial-gradient(1px 1px at 27% 77%, #ffd23d, transparent),
+    radial-gradient(1px 1px at 54% 96%, #9eefff, transparent),
+    radial-gradient(60% 50% at 20% 85%, rgb(255 111 216 / 0.45), transparent 70%),
+    radial-gradient(60% 50% at 85% 15%, #4a2390, transparent 70%),
+    #07040d;
+}
+.tile-revamp i:nth-child(1) {
+  display: block;
+  left: 38%;
+  top: 33%;
+  width: 42%;
+  height: 42%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 32%, #ffd0f4 0 8%, #c27bff 38%, #3a1a6a 80%);
+}
+.tile-revamp i:nth-child(2) {
+  display: block;
+  left: 25%;
+  top: 48%;
+  width: 69%;
+  height: 13%;
+  border-radius: 50%;
+  border: 2px solid #ffd23d;
+  rotate: -18deg;
+}
+.tile-revamp i:nth-child(3) {
+  display: block;
+  right: 13%;
+  bottom: 15%;
+  width: 12%;
+  height: 12%;
+  border-radius: 50%;
+  background: #2b9bff;
+}

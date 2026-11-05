@@ -12,6 +12,8 @@ import { registerServiceWorker } from './pwa/register'
 import { createStore } from './storage/store'
 import { App } from './ui/App'
 import './ui/app.css'
+import './ui/themes.css'
+import { bootTheme } from './ui/themes'
 
 // PR previews build with their own VITE_DB_NAME, so they never touch the real habit data.
 // The database keeps its first name, 'habit-stats', after the rename to Meta Log: renaming it
@@ -27,8 +29,11 @@ fitToScreen(window, document.documentElement)
 // this also helps in a browser tab.
 void navigator.storage?.persist?.()
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App store={store} />
-  </StrictMode>,
+// Apply the saved theme (step 8) before the app shows, so it never flashes the wrong colours.
+void bootTheme(store).then(() =>
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App store={store} />
+    </StrictMode>,
+  ),
 )

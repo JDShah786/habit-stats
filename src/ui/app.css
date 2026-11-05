@@ -1,6 +1,7 @@
-/* Neon Lime, Persona-inspired: P3R's "water and bubbles" mood in green. Rounded pills, glossy
-   bubbles, tilted panels, inverted lime highlights with hard offset shadows. All original shapes.
-   Tilt each item on its own (CSS `rotate`), never a whole list: a tilted tall list drifts off-screen. */
+/* Redux (the default theme), Persona-inspired: P3R's "water and bubbles" mood in green. Rounded pills,
+   glossy bubbles, tilted panels, inverted lime highlights with hard offset shadows. All original shapes.
+   Tilt each item on its own (CSS `rotate`), never a whole list: a tilted tall list drifts off-screen.
+   The other four themes (step 8) live in themes.css: they redefine these tokens and add a background. */
 
 :root {
   --bg: #050807;
@@ -12,6 +13,16 @@
   --black: #000000;
   --line: rgb(255 255 255 / 0.85);
   --warn: #ff8a7a;
+  /* Theme tokens (step 8), set here to Redux's look. Edges: the hard offset shadows on buttons,
+     cards and headings. The rest: text that sits straight on the background, which light themes
+     darken or brighten so it stays readable. */
+  --edge: var(--ink);
+  --edge2: var(--g);
+  --label: var(--g);
+  --on-bg: var(--ink);
+  --on-muted: var(--muted);
+  --part: var(--lime);
+  --ghost: color-mix(in srgb, var(--g) 12%, transparent);
   --display: 'Montserrat', 'Arial Black', system-ui, sans-serif;
   --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -140,7 +151,7 @@ button:disabled {
   font: 900 italic 104px var(--display);
   letter-spacing: -0.02em;
   white-space: nowrap;
-  color: color-mix(in srgb, var(--g) 12%, transparent);
+  color: var(--ghost);
 }
 
 .marquee {
@@ -187,7 +198,7 @@ body:has(.pc, .moment) .marquee {
   font-size: 62px;
   line-height: 0.9;
   letter-spacing: -0.04em;
-  text-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--g);
+  text-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--edge2);
 }
 
 .date .num small {
@@ -212,7 +223,7 @@ body:has(.pc, .moment) .marquee {
   font-weight: 800;
   font-size: 11px;
   letter-spacing: 0.2em;
-  color: var(--lime);
+  color: var(--part);
 }
 
 /* Command menu */
@@ -232,7 +243,7 @@ body:has(.pc, .moment) .marquee {
   font: 800 12px var(--display);
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--on-muted);
 }
 
 /* Sizes and the staircase step shrink on narrow phones so the longest word stays on screen. */
@@ -274,7 +285,7 @@ body:has(.pc, .moment) .marquee {
   background: linear-gradient(100deg, var(--g), var(--lime));
   color: var(--black);
   text-shadow: none;
-  box-shadow: 8px 8px 0 var(--black), 10px 10px 0 var(--ink);
+  box-shadow: 8px 8px 0 var(--black), 10px 10px 0 var(--edge);
 }
 
 /* Today's list card on the menu */
@@ -291,7 +302,7 @@ body:has(.pc, .moment) .marquee {
   border-radius: 26px;
   background: var(--black);
   border: 2px solid var(--ink);
-  box-shadow: 6px 6px 0 var(--g);
+  box-shadow: 6px 6px 0 var(--edge2);
   rotate: 3deg;
 }
 
@@ -363,7 +374,7 @@ body:has(.pc, .moment) .marquee {
   border: 2px solid var(--g);
   background: var(--black);
   color: var(--g);
-  box-shadow: 3px 3px 0 var(--g);
+  box-shadow: 3px 3px 0 var(--edge2);
   font: 900 italic 13px var(--display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -411,7 +422,7 @@ body:has(.pc, .moment) .marquee {
   height: 30px;
   border-radius: 999px;
   background: linear-gradient(100deg, var(--g), var(--lime));
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--edge);
 }
 
 .viewport {
@@ -515,8 +526,8 @@ h2 {
   display: inline-block;
   font-size: 13px;
   letter-spacing: 0.12em;
-  color: var(--g);
-  border: 2px solid var(--g);
+  color: var(--label);
+  border: 2px solid var(--label);
   border-radius: 999px;
   padding: 3px 12px;
   margin: 10px 0 0;
@@ -621,7 +632,7 @@ section + section h2 {
 
 .empty p {
   margin: 0 0 18px;
-  color: var(--muted);
+  color: var(--on-muted);
 }
 
 /* Nearest rank */
@@ -641,6 +652,7 @@ section + section h2 {
 .near b {
   font: 900 italic 26px var(--display);
   text-transform: uppercase;
+  color: var(--on-bg);
 }
 
 .near .up {
@@ -674,7 +686,7 @@ section + section h2 {
   border-radius: 999px;
   background: linear-gradient(100deg, var(--g), var(--lime));
   color: var(--black);
-  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--edge);
   font: 900 italic 20px var(--display);
   text-transform: uppercase;
 }
@@ -736,12 +748,12 @@ section + section h2 {
 .chip[aria-pressed='true'] {
   background: var(--g);
   color: var(--black);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--edge);
 }
 
 .no-match {
   margin: 24px 0 0;
-  color: var(--muted);
+  color: var(--on-muted);
 }
 
 .lib {
@@ -799,7 +811,7 @@ section + section h2 {
   color: var(--black);
   font: 900 24px / 1 var(--display);
   background: radial-gradient(circle at 32% 28%, var(--ink) 0 10%, var(--lime) 24%, var(--g) 75%);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--edge);
 }
 
 .pick {
@@ -815,7 +827,7 @@ section + section h2 {
   color: var(--black);
   font: 900 italic 12px var(--display);
   text-transform: uppercase;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--edge);
 }
 
 .tag {
@@ -922,7 +934,7 @@ section + section h2 {
   color: var(--black);
   font: 900 italic 14px var(--display);
   text-transform: uppercase;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--edge);
 }
 
 /* New custom habit sheet */
@@ -1013,7 +1025,7 @@ legend,
   border-radius: 999px;
   background: linear-gradient(100deg, var(--g), var(--lime));
   color: var(--black);
-  box-shadow: 4px 4px 0 var(--black), 6px 6px 0 var(--ink);
+  box-shadow: 4px 4px 0 var(--black), 6px 6px 0 var(--edge);
   font: 900 italic 18px var(--display);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1060,14 +1072,14 @@ legend,
   border-radius: 999px;
   background: var(--lime);
   color: var(--black);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--edge);
   font: 900 italic 13px var(--display);
   text-transform: uppercase;
 }
 
 .stat .rk.max {
   background: var(--ink);
-  box-shadow: 3px 3px 0 var(--g);
+  box-shadow: 3px 3px 0 var(--edge2);
 }
 
 .ttl-row {
@@ -1239,7 +1251,7 @@ input.mins {
   background: none;
   font: 900 italic 80px / 1 var(--display);
   letter-spacing: -0.04em;
-  text-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--g);
+  text-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--edge2);
   caret-color: var(--lime);
   font-variant-numeric: tabular-nums;
 }
@@ -1368,7 +1380,7 @@ input:focus {
   height: 58px;
   padding: 0;
   font-size: 24px;
-  box-shadow: 6px 6px 0 var(--black), 8px 8px 0 var(--ink);
+  box-shadow: 6px 6px 0 var(--black), 8px 8px 0 var(--edge);
 }
 
 .error {
@@ -1525,7 +1537,7 @@ input:focus {
   font: 900 italic 22px var(--display);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--edge);
   rotate: -6deg;
 }
 
@@ -1535,7 +1547,7 @@ input:focus {
   font: 900 italic 72px / 0.95 var(--display);
   letter-spacing: -0.03em;
   text-transform: uppercase;
-  text-shadow: 5px 5px 0 var(--black), 8px 8px 0 var(--g);
+  text-shadow: 5px 5px 0 var(--black), 8px 8px 0 var(--edge2);
   white-space: nowrap;
   rotate: -6deg;
 }
@@ -1577,7 +1589,7 @@ input:focus {
   display: inline-block;
   font: 900 italic 150px / 0.85 var(--display);
   color: var(--lime);
-  text-shadow: 6px 6px 0 var(--black), 9px 9px 0 var(--ink);
+  text-shadow: 6px 6px 0 var(--black), 9px 9px 0 var(--edge);
 }
 
 .mo-title {
@@ -1621,7 +1633,7 @@ input:focus {
   color: var(--black);
   font: 900 italic 28px var(--display);
   text-transform: uppercase;
-  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--edge);
 }
 
 .mo-next {
@@ -1674,7 +1686,7 @@ input:focus {
   font: 900 italic 64px / 0.9 var(--display);
   letter-spacing: -0.02em;
   text-transform: uppercase;
-  text-shadow: 5px 5px 0 var(--black), 9px 9px 0 var(--g);
+  text-shadow: 5px 5px 0 var(--black), 9px 9px 0 var(--edge2);
   white-space: nowrap;
   rotate: -6deg;
 }
@@ -1727,7 +1739,7 @@ input:focus {
   color: var(--black);
   font: 900 italic 30px var(--display);
   text-transform: uppercase;
-  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--black), 7px 7px 0 var(--edge);
   rotate: -6deg;
 }
 
@@ -1914,7 +1926,7 @@ input:focus {
   text-transform: uppercase;
   white-space: nowrap;
   rotate: -4deg;
-  box-shadow: 3px 3px 0 var(--black), 5px 5px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--black), 5px 5px 0 var(--edge);
 }
 
 /* One bead per point: a small glossy orb flying from the caption into its stat. */

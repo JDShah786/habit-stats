@@ -4,6 +4,7 @@
 import { scoreDay, type Weights } from '../engine/scoring'
 import { rankEvents, STATS, type RankEvent, type Stat, type StatPoints } from '../engine/stats'
 import { HABITS, slugOf, type Habit } from '../library/library'
+import { DEFAULT_THEME, isThemeId, type ThemeId } from '../ui/themes'
 import type { BackupData } from './backup'
 import type { ActiveHabitRow, AwardRow, HabitDB, HabitKind, SessionRow } from './db'
 
@@ -35,6 +36,9 @@ export interface Store {
   // The one-time "add to Home Screen" hint (step 7): dismissed once, gone for good.
   installHintDismissed(): Promise<boolean>
   dismissInstallHint(): Promise<void>
+  // The chosen theme (step 8): a phone preference, so it isn't part of a backup.
+  theme(): Promise<ThemeId>
+  setTheme(theme: ThemeId): Promise<void>
 }
 
 export const MAX_NAME = 40
@@ -183,6 +187,17 @@ export function createStore(db: HabitDB, today: () => string): Store {
 
     dismissInstallHint: async () => {
       await db.settings.put({ key: 'installHintDismissed', value: 'yes' })
+    },
+
+    // An unknown saved value (e.g. from a future version) falls back to the default.
+    theme: async () => {
+      const saved = (await db.settings.get('theme'))?.value
+      return isThemeId(saved) ? saved : DEFAULT_THEME
+    },
+
+    setTheme: async (theme) => {
+      if (!isThemeId(theme)) throw new Error(`Unknown theme: ${String(theme)}`)
+      await db.settings.put({ key: 'theme', value: theme })
     },
   }
 }

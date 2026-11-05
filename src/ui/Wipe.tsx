@@ -2,6 +2,7 @@
 
 import { animate, stagger } from 'motion/react'
 import { useEffect, useEffectEvent, useRef } from 'react'
+import type { ThemeId } from './themes'
 
 const EASE = [0.7, 0, 0.3, 1] as const
 // Covering starts fast, so the bars show on the very next frames after the tap's bubble pop.
@@ -11,11 +12,13 @@ const COVER_EASE = [0.3, 0.5, 0.3, 1] as const
 
 interface Props {
   direction: 1 | -1
+  // Paint the bars in this theme instead of the current one (switching themes, step 8).
+  theme?: ThemeId
   onCovered: () => void
   onDone: () => void
 }
 
-export function Wipe({ direction, onCovered, onDone }: Props) {
+export function Wipe({ direction, theme, onCovered, onDone }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const from = direction > 0 ? '-95%' : '95%'
   const to = direction > 0 ? '130%' : '-130%'
@@ -40,7 +43,7 @@ export function Wipe({ direction, onCovered, onDone }: Props) {
   }, [from, to])
 
   return (
-    <div ref={ref} className="wipe" aria-hidden="true">
+    <div ref={ref} className="wipe" aria-hidden="true" data-theme={theme}>
       {[0, 1, 2].map((i) => (
         <i key={i} style={{ transform: `translateX(${from})` }} />
       ))}
