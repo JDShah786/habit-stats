@@ -304,8 +304,8 @@ describe('backup: all data in, all data out (step 6)', () => {
     activeHabits: [{ habitId: 'custom-juggling', addedOn: '2026-10-02', kind: 'anytime' as const }],
     sessions: [{ id: 7, habitId: 'custom-juggling', date: YESTERDAY, minutes: 30 }],
     awards: [
-      { habitId: 'custom-juggling', date: YESTERDAY, stat: 'proficiency' as const, points: 3 },
       { habitId: 'custom-juggling', date: YESTERDAY, stat: 'charm' as const, points: 3 },
+      { habitId: 'custom-juggling', date: YESTERDAY, stat: 'proficiency' as const, points: 3 },
     ],
   }
 
