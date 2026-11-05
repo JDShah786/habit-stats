@@ -12,6 +12,8 @@ import { App } from './ui/App'
 import './ui/app.css'
 
 // PR previews build with their own VITE_DB_NAME, so they never touch the real habit data.
+// The database keeps its first name, 'habit-stats', after the rename to Meta Log: renaming it
+// would leave everyone's data behind.
 const db = openDb(import.meta.env.VITE_DB_NAME || 'habit-stats')
 const store = createStore(db, () => localDay(new Date()))
 

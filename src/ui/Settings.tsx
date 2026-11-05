@@ -32,7 +32,7 @@ const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 async function handOver(file: File): Promise<boolean> {
   if (navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'Habit Stats backup' })
+      await navigator.share({ files: [file], title: 'Meta Log backup' })
       return true
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return false

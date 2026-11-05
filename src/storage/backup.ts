@@ -8,6 +8,8 @@ import { CATEGORIES, HABITS, slugOf, type Category } from '../library/library'
 import type { ActiveHabitRow, AwardRow, CustomHabitRow, SessionRow } from './db'
 import { MAX_NAME, validWeights } from './store'
 
+// The format id inside every backup file. It stays 'habit-stats' (the app's first name) so
+// backups made before the rename to Meta Log still import.
 export const BACKUP_APP = 'habit-stats'
 export const BACKUP_VERSION = 1
 
@@ -28,7 +30,7 @@ export interface Backup {
 export const makeBackup = (data: BackupData, exportedAt: string): Backup => ({ app: BACKUP_APP, version: BACKUP_VERSION, exportedAt, data })
 
 // `day` is the phone's 'YYYY-MM-DD'.
-export const backupFileName = (day: string) => `habit-stats-backup-${day}.json`
+export const backupFileName = (day: string) => `meta-log-backup-${day}.json`
 
 // What the confirm step shows.
 export const backupSummary = (backup: Backup) => ({
@@ -39,7 +41,7 @@ export const backupSummary = (backup: Backup) => ({
 
 export type BackupCheck = { ok: true; backup: Backup } | { ok: false; error: string }
 
-const NOT_OURS = 'This is not a Habit Stats backup.'
+const NOT_OURS = 'This is not a Meta Log backup.'
 const TABLES = ['customHabits', 'activeHabits', 'sessions', 'awards'] as const
 
 // A found problem: checking stops at the first one.

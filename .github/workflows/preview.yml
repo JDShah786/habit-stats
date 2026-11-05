@@ -1,4 +1,4 @@
-# Gives every PR its own preview at /habit-stats/pr-preview/pr-<number>/ and comments the link.
+# Gives every PR its own preview at /meta-log/pr-preview/pr-<number>/ and comments the link.
 # Each preview uses its own database name, so it never touches real habit data.
 name: PR preview
 

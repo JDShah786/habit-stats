@@ -1,4 +1,4 @@
-# Habit Stats App
+# Meta Log
 
 Free iPhone habit tracker (PWA). Timed habits earn points in four Persona-style stats: Charm, Courage, Intelligence, Proficiency. Each stat ranks 1–5 and graduates at 1000. All data stays on the phone.
 
