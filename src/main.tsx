@@ -7,6 +7,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { localDay } from './engine/scoring'
 import { openDb } from './storage/db'
+import { registerServiceWorker } from './pwa/register'
 import { createStore } from './storage/store'
 import { App } from './ui/App'
 import './ui/app.css'
@@ -16,6 +17,12 @@ import './ui/app.css'
 // would leave everyone's data behind.
 const db = openDb(import.meta.env.VITE_DB_NAME || 'habit-stats')
 const store = createStore(db, () => localDay(new Date()))
+
+// Offline and installable (step 7). Not in PR previews.
+registerServiceWorker()
+// Ask the phone to keep this app's storage permanently. Installed iPhone apps already are;
+// this also helps in a browser tab.
+void navigator.storage?.persist?.()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

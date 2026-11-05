@@ -30,6 +30,8 @@ jobs:
         if: github.event.action != 'closed'
         env:
           VITE_DB_NAME: habit-stats-pr-${{ github.event.number }}
+          # No service worker in previews: the real app's would serve its own pages here.
+          VITE_PWA: 'off'
       # Deploys on open/update, removes the preview when the PR closes.
       - uses: rossjrw/pr-preview-action@v1
         with:

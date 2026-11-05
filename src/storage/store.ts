@@ -32,6 +32,9 @@ export interface Store {
   // ISO time of the last completed backup, or null.
   lastBackup(): Promise<string | null>
   setLastBackup(at: string): Promise<void>
+  // The one-time "add to Home Screen" hint (step 7): dismissed once, gone for good.
+  installHintDismissed(): Promise<boolean>
+  dismissInstallHint(): Promise<void>
 }
 
 export const MAX_NAME = 40
@@ -174,6 +177,12 @@ export function createStore(db: HabitDB, today: () => string): Store {
 
     setLastBackup: async (at) => {
       await db.settings.put({ key: 'lastBackup', value: at })
+    },
+
+    installHintDismissed: async () => (await db.settings.get('installHintDismissed'))?.value === 'yes',
+
+    dismissInstallHint: async () => {
+      await db.settings.put({ key: 'installHintDismissed', value: 'yes' })
     },
   }
 }

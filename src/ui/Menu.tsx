@@ -1,8 +1,10 @@
 // Command-menu home: big stacked italic words, one per section. The last section is marked.
-// A card below previews today's list and opens Today.
+// A card below previews today's list and opens Today. On an iPhone not yet installed, a
+// one-time hint explains how to add the app to the Home Screen.
 
 import { motion } from 'motion/react'
-import type { MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
+import { isIOS, isStandalone, shouldShowInstallHint } from '../pwa/installHint'
 import type { Store } from '../storage/store'
 import { GhostWord } from './Decor'
 import { burst, SECTIONS, SNAP, SOFT, tapPoint } from './motionKit'
@@ -56,7 +58,50 @@ export function Menu({ store, current, reduced, onChoose }: Props) {
       >
         <TodayCard store={store} />
       </motion.button>
+      <InstallHint store={store} />
     </div>
+  )
+}
+
+// On an iPhone or iPad, until installed or dismissed: how to add Meta Log to the Home Screen.
+function InstallHint({ store }: { store: Store }) {
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    const ios = isIOS(navigator.userAgent, navigator.maxTouchPoints ?? 0)
+    const standalone = isStandalone(window as unknown as Parameters<typeof isStandalone>[0])
+    if (!ios || standalone) return
+    let showing = true
+    void store.installHintDismissed().then((dismissed) => showing && setShow(shouldShowInstallHint({ ios, standalone, dismissed })))
+    return () => {
+      showing = false
+    }
+  }, [store])
+
+  if (!show) return null
+  return (
+    <motion.aside
+      className="install-hint"
+      aria-label="Install Meta Log"
+      initial={{ y: 40, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ ...SOFT, delay: 0.25 }}
+    >
+      <p>
+        <b>Add Meta Log to your Home Screen:</b> tap Share, then Add to Home Screen. The installed app keeps its own
+        data, so export a backup here first if you've logged in Safari.
+      </p>
+      <button
+        className="install-x"
+        aria-label="Dismiss install hint"
+        onClick={() => {
+          setShow(false)
+          void store.dismissInstallHint()
+        }}
+      >
+        ✕
+      </button>
+    </motion.aside>
   )
 }
 

@@ -8,7 +8,7 @@ Build order from SPEC.md. Tick a step when it's built, reviewed by Hamid, and re
 - [x] 4. Screens: Today → Library → Stats → My habits — PRs #9, #11–#15, merged 2026-11-04
 - [x] 5. Rank-up and graduation animations + points chart — PRs #17, #18, merged 2026-11-04
 - [x] 6. Settings export/import — PR #20, merged 2026-11-04
-- [ ] 7. PWA install + offline (deploy already runs from main, see decisions log)
+- [x] 7. PWA install + offline — PR #23, merged 2026-11-04 (deploy runs from main)
 
 ## Notes for later steps
 
@@ -112,3 +112,10 @@ Only decisions Hamid approved go here. Once its step is reviewed, Hamid gives a 
 | 2026-11-04 | 6 | Import does not replay sessions to re-check stored points. | Preset weights may be tuned in later versions; a replay check would reject genuine older backups. | → in SPEC |
 | 2026-11-04 | 6 | Before replacing, a confirm step shows "Backup from <date> · N habits on your list · N sessions" and "This replaces all data on this phone." with REPLACE and Cancel. REPLACE swaps every table in one transaction, every section reloads, the sheet shows "Backup restored.", and "Last backup" becomes the backup's date. No rank-up or graduation animations play. | Nothing changes until you tap REPLACE. | → in SPEC |
 | 2026-11-04 | 7 | The app is renamed Meta Log everywhere you can see: Home Screen name, tab title, install hint, backup file name (meta-log-backup-YYYY-MM-DD.json) and messages, SPEC and CLAUDE.md titles. The on-phone database and the backup format id keep their first name, habit-stats. The menu keeps its HABITS background word. The GitHub repo becomes meta-log (address /meta-log/) before installing. The rename ships in its own PR. | Hamid's call. Renaming the database would lose data; keeping the format id means older backups still import. | → in SPEC |
+| 2026-11-04 | 7 | Icon (approved): the stat diamond on a black, lime-edged cross over the near-black background. Original SVG, rendered to PNGs at 180 (iPhone), 192 and 512, plus a padded 512 maskable for Android crops. The SVG is also the tab icon. | Ties the Home Screen to the app's signature chart. | No |
+| 2026-11-04 | 7 | Home Screen app: name Meta Log, full screen (standalone), portrait, background and theme #050807, start and scope ./ (relative). iPhone tags: apple-touch-icon, title, full screen, status bar black-translucent. | Installs from Safari like a real app. | No |
+| 2026-11-04 | 7 | Offline: a service worker caches the whole app on first open (code, styles, page, fonts, icons: 32 files, ~1.1 MB), so it works with no signal. The app asks the phone to keep its storage permanently. | Data was already on the phone; now the app is too. | No |
+| 2026-11-04 | 7 | Updates arrive quietly: a new version downloads in the background and takes over the next time the app opens (no skipWaiting/clientsClaim). It never reloads mid-use. | Hamid's call. | No |
+| 2026-11-04 | 7 | PR previews build with VITE_PWA=off and register no service worker; the real app's worker ignores /pr-preview/ pages. | Previews share the site; they must always show the PR's own build. | No |
+| 2026-11-04 | 7 | Install hint: only on an iPhone or iPad, only when not installed: a one-time banner across the top of the menu (over the date block): "Add Meta Log to your Home Screen: tap Share, then Add to Home Screen. The installed app keeps its own data, so export a backup here first if you've logged in Safari." Its X dismisses it for good (settings table). | iPhone Safari never offers to install; the Safari tab and the installed app keep separate data. | No |
+| 2026-11-04 | 7 | vite-plugin-pwa 2.0.0, pinned (dev only, runs at build time). npm audit flags moderate/low issues in its build-time helpers (workbox); none of that code ships to the phone, and the --force fix would install breaking versions, so they stay. | SPEC stack; release over two weeks old. | No |
