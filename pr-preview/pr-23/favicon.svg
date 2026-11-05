@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Meta Log icon: the stat diamond on its lime-edged cross. Original art. -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#0d1f12"/>
+      <stop offset="1" stop-color="#050807"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- The cross: arms end behind the four stat nodes. Hard offset shadow. -->
+  <g transform="translate(512 512)">
+    <path d="M-92,-400 H92 V-92 H400 V92 H92 V400 H-92 V92 H-400 V-92 H-92 Z" fill="#39ff7a" fill-opacity="0.3" transform="translate(26 26)"/>
+    <path d="M-92,-400 H92 V-92 H400 V92 H92 V400 H-92 V92 H-400 V-92 H-92 Z" fill="#000" stroke="#39ff7a" stroke-width="22" stroke-linejoin="round"/>
+    <!-- Rank rings -->
+    <path d="M0,-320 L320,0 L0,320 L-320,0 Z" fill="none" stroke="#39ff7a" stroke-opacity="0.55" stroke-width="8"/>
+    <path d="M0,-192 L192,0 L0,192 L-192,0 Z" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="6"/>
+    <!-- The stat shape, with its glow as a wide faint stroke -->
+    <path d="M0,-250 L285,0 L0,170 L-215,0 Z" fill="none" stroke="#39ff7a" stroke-opacity="0.35" stroke-width="54" stroke-linejoin="round"/>
+    <path d="M0,-250 L285,0 L0,170 L-215,0 Z" fill="#39ff7a" fill-opacity="0.45" stroke="#c6ff3d" stroke-width="22" stroke-linejoin="round"/>
+    <!-- Stat nodes at the arm ends -->
+    <g fill="#000" stroke="#39ff7a" stroke-width="18">
+      <circle cx="0" cy="-320" r="46"/>
+      <circle cx="-320" cy="0" r="46"/>
+      <circle cx="0" cy="320" r="46"/>
+    </g>
+    <circle cx="320" cy="0" r="56" fill="#c6ff3d" stroke="#fff" stroke-width="16"/>
+  </g>
+</svg>
