@@ -76,6 +76,9 @@ button:disabled {
 .stage {
   position: fixed;
   inset: 0;
+  /* --fit-gap: how much shorter than the screen the installed iPhone app's window is reported
+     (src/pwa/fit.ts). Full-screen layers stretch down by it to reach the real bottom; 0 elsewhere. */
+  bottom: calc(-1 * var(--fit-gap, 0px));
   max-width: 480px;
   margin-inline: auto;
   /* clip, not hidden: a hidden box can still be scrolled sideways by focus or scrollIntoView,
@@ -380,6 +383,8 @@ body:has(.pc, .moment) .marquee {
   rotate: -4deg;
   background: var(--black);
   border-block: 3px solid var(--g);
+  /* The cursor resizes as it slides; keep that layout work inside the strip. */
+  contain: layout style;
 }
 
 .strip button {
@@ -399,7 +404,10 @@ body:has(.pc, .moment) .marquee {
 
 .cursor {
   position: absolute;
+  left: 0;
   top: 6px;
+  will-change: transform;
+  transition: width 140ms ease-out;
   height: 30px;
   border-radius: 999px;
   background: linear-gradient(100deg, var(--g), var(--lime));
@@ -419,6 +427,8 @@ body:has(.pc, .moment) .marquee {
   display: flex;
   width: 400%;
   height: 100%;
+  /* Its own graphics layer, so a swipe only moves pixels instead of repainting the sections. */
+  will-change: transform;
 }
 
 .pane {
@@ -863,7 +873,7 @@ section + section h2 {
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(20px + var(--safe-bottom));
+  bottom: calc(20px + var(--safe-bottom) - var(--fit-gap, 0px));
   z-index: 15;
   max-width: 448px;
   margin: 0 auto;
@@ -1100,6 +1110,7 @@ legend,
 .sheet-backdrop {
   position: fixed;
   inset: 0;
+  bottom: calc(-1 * var(--fit-gap, 0px));
   z-index: 20;
   background: rgb(0 0 0 / 0.62);
   animation: fade-in 160ms ease-out;
@@ -1115,11 +1126,11 @@ legend,
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: calc(-1 * var(--fit-gap, 0px));
   z-index: 21;
   width: 100%;
   max-width: 480px;
-  max-height: calc(100dvh - 24px - var(--safe-top));
+  max-height: calc(100dvh + var(--fit-gap, 0px) - 24px - var(--safe-top));
   overflow-y: auto;
   margin: 0 auto;
   padding: 6px 20px calc(24px + var(--safe-bottom));
@@ -1356,6 +1367,7 @@ input:focus {
 .moment {
   position: fixed;
   inset: 0;
+  bottom: calc(-1 * var(--fit-gap, 0px));
   z-index: 50;
   max-width: 480px;
   margin: 0 auto;
@@ -1743,6 +1755,7 @@ input:focus {
 .pc {
   position: fixed;
   inset: 0;
+  bottom: calc(-1 * var(--fit-gap, 0px));
   z-index: 45;
   max-width: 480px;
   margin: 0 auto;

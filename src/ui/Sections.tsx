@@ -35,23 +35,53 @@ export function Sections({ index, reduced, onIndex, onMenu, renderSection }: Pro
     return () => removeEventListener('resize', measure)
   }, [])
 
-  // The strip's lime cursor and the background word follow the track, even mid-drag.
+  // Where each strip button sits. Measured once (and again on resize or when the font loads), never
+  // during a swipe: reading layout every frame forced the phone to re-lay the page 60 times a second.
+  const slots = useRef<{ left: number; width: number }[]>([])
+  const litAt = useRef(-1)
+  const measureSlots = useCallback(() => {
+    slots.current = [...strip.current!.querySelectorAll('button')].map((b) => ({ left: b.offsetLeft, width: b.offsetWidth }))
+    litAt.current = -1 // sizes may have changed: set the cursor width again on the next follow
+  }, [])
+
+  // The strip's lime cursor and the background word follow the track, even mid-drag. Only cheap
+  // writes here: a transform for position, and the lit class only when it changes.
   const follow = useCallback(
     (value: number) => {
-      const buttons = [...strip.current!.querySelectorAll('button')]
+      if (slots.current.length === 0) measureSlots()
+      const s = slots.current
       const at = width ? Math.min(LAST, Math.max(0, -value / width)) : index
       const i0 = Math.floor(at)
       const i1 = Math.min(i0 + 1, LAST)
       const f = at - i0
       const mix = (a: number, b: number) => a + (b - a) * f
-      cursor.current!.style.left = `${mix(buttons[i0].offsetLeft, buttons[i1].offsetLeft)}px`
-      cursor.current!.style.width = `${mix(buttons[i0].offsetWidth, buttons[i1].offsetWidth)}px`
-      buttons.forEach((b, i) => b.classList.toggle('lit', i === Math.round(at)))
+      // Centre the cursor on its sliding position; its width only changes when it passes the
+      // midpoint (a short CSS transition smooths that), so a swipe causes no layout at all.
+      const lit = Math.round(at)
+      const w = s[lit].width
+      const centre = mix(s[i0].left + s[i0].width / 2, s[i1].left + s[i1].width / 2)
+      cursor.current!.style.transform = `translateX(${centre - w / 2}px)`
+      if (lit !== litAt.current) {
+        litAt.current = lit
+        cursor.current!.style.width = `${w}px`
+        strip.current!.querySelectorAll('button').forEach((b, i) => b.classList.toggle('lit', i === lit))
+      }
       if (parallax.current && width) parallax.current.style.transform = `translateX(${(-value / width - index) * -80}px)`
     },
-    [width, index],
+    [width, index, measureSlots],
   )
   useMotionValueEvent(x, 'change', follow)
+
+  // Re-measure the strip when the viewport width changes and once Montserrat has loaded.
+  useLayoutEffect(() => {
+    measureSlots()
+    follow(x.get())
+    void document.fonts?.ready.then(() => {
+      if (!strip.current) return
+      measureSlots()
+      follow(x.get())
+    })
+  }, [width, measureSlots, follow, x])
 
   // Move the track to the current section: jump on first show, after a resize or with
   // Reduce Motion; spring otherwise.
