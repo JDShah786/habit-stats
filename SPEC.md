@@ -120,6 +120,7 @@ Two kinds of data: the **library** ships inside the app as a read-only file; **y
 | ActiveHabit | IndexedDB | habitId, addedOn, kind (daily or anytime) | Which habits are on your list, and how they show. Re-adding sets addedOn to the latest add. Removing only hides the habit; its history stays. Switching daily/anytime keeps addedOn. Undo after a remove puts the row back exactly. |
 | Session | IndexedDB | id (auto-numbered = logged order), habitId, date (YYYY-MM-DD, phone-local), minutes | Every time block you log — the raw truth |
 | Award | IndexedDB | habitId, date, stat, points | What each habit has paid each stat that day (rule 5 diffs against this) |
+| Setting | IndexedDB | key, value | Small app settings, e.g. when the last backup was made |
 
 Totals are not stored: a stat's total is the sum of its Award rows, and this morning's totals are the awards dated before today. Rank, title, Max and Graduated are calculated from totals.
 
@@ -176,7 +177,13 @@ The app opens on a command menu: the words TODAY / LIBRARY / STATS / MY HABITS a
   - **Timing:** about 2.4 s; can be tapped away after 1 s. It plays after any rank-ups from the same change.
   - The app then shows as Graduated. A single stat at 1000 gets the normal rank-up to Rank 5 and shows Max.
 - **Keyboard and screen readers:** rank-up and graduation are named dialogs. TAP TO CONTINUE is a real button, locked until the moment can be tapped away. Escape or a tap anywhere also closes them. The points chart is announced as "Points earned" with each stat's gain.
-- **Settings:** export all data to a file and import it back (free backup). Opened from a SETTINGS button on My habits.
+- **Settings:** a bottom sheet opened from a SETTINGS button on My habits. It shows "Last backup: <date>" (or "No backup yet").
+  - **Export:** saves a JSON file, `habit-stats-backup-YYYY-MM-DD.json`, holding every table plus the app name, a format version and the export time. It opens the iPhone share sheet, or downloads where there's none. Only a completed export counts as a backup.
+  - **Import:** replaces all data, all or nothing.
+    - The file is checked first against this spec's rules: format and version, sessions, awards, your list and custom habits. Any problem imports nothing and says why.
+    - Stored points aren't re-checked by replaying sessions, since preset weights may change between versions.
+    - A confirm step shows "Backup from <date> · N habits on your list · N sessions" and "This replaces all data on this phone." Nothing changes until REPLACE, which swaps everything in one transaction.
+    - No rank-up or graduation animations play.
 
 ## Look and motion
 
@@ -219,4 +226,4 @@ Accounts, cloud sync, App Store, reminders/notifications, streaks, history/calen
 - **Back-dating:** no, today only.
 - **Removing a habit:** hides it from your list; its sessions and points are never wiped.
 - **Daily vs anytime:** no missed marker.
-- **Backup:** export/import in v1.
+- **Backup:** export/import in v1; import replaces everything, all or nothing.
